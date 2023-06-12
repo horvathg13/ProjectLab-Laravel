@@ -40,3 +40,4 @@ Route::post("getprojectparticipants/{id}",[App\Http\Controllers\API\Api_Controll
 Route::post("createparticipants",[App\Http\Controllers\API\Api_Controller::class, "createParticipants"]);
 Route::post("projects/{id}/tasks",[App\Http\Controllers\API\Api_Controller::class, "getTasks"]);
 Route::post("projects/{id}",[App\Http\Controllers\API\Api_Controller::class, "getProjectById"]);
+Route::post("assign-employee-to-task",[App\Http\Controllers\API\Api_Controller::class, "AssignEmpoyleeToTask"]);

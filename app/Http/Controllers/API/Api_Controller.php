@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\AssignedTask;
 use App\Models\ProjectParticipants;
 use App\Models\Projects;
 use App\Models\ProjectsStatus;
@@ -421,12 +422,8 @@ class Api_Controller extends Controller
     }
     public function AssignEmpoyleeToTask(Request $request){
         $validator = Validator::make($request->all(),[
-            "task_name" => "required",
-            "description" => "required",
-            "deadline"=> "required|date_format:Y.m.d|after_or_equal:today",
-            "project_id"=> "required",
-            "task_priority"=>"required"
-           
+            "employee" => "required",
+            "toAttachTaskData" => "required",           
         ]);
 
         if ($validator->fails()){
@@ -436,6 +433,29 @@ class Api_Controller extends Controller
             ];
             return response()->json($response, 400);
         }
+
+        $employee = $validator->validated()['employee'];
+        $Task= $validator->validated()['toAttachTaskData'];
+        $TaskId= null;
+
+        /*foreach($Task as $t){
+            $TaskId = $t["task_id"];
+        }
+        
+        $credentials=[];
+        foreach($employee as $e){
+            $credentials[]=[
+                "task_id"=>$TaskId,
+                "p_participant_id"=>$e["id"],
+            ];
+            AssignedTask::create($credentials);
+        }
+
+        $success=[   
+            "message"=>"Task attach was successfull!",
+            "code"=>200,
+        ];*/
+        return response();
     }
 
     public function createParticipants(Request $request){
