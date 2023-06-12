@@ -325,6 +325,38 @@ class Api_Controller extends Controller
         }
     }    
 
+    public function getProjectById($id){
+
+        $projects = Projects::where("id", $id)->get();
+        $success =[];
+  
+
+        foreach($projects as $project){
+            $findManager = User::where("id", $project->p_manager_id)->first();
+            $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
+        
+
+            $success[] =[
+                "project_id" => $project->id,
+                "manager" => $findManager->name,
+                "name"=>$project->p_name,
+                "status"=>$findStatus->p_status,
+                "deadline"=>$project->deadline
+            ];
+
+           
+        }
+
+        if(!empty($success)){
+            return response()->json($success,200);
+        }else{
+            $success=[   
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($success);
+        }
+    }
        
 
     
@@ -351,27 +383,60 @@ class Api_Controller extends Controller
             return response()->json($success,200);
         }else{
             $success=[   
-                "message"=>"Database error",
+                "message"=>"You have no tasks in this project!",
                 "code"=>404,
             ];
             return response()->json($success,404);
         }
     }
 
-    public function getTaskNoParticipants($id){
-        $task= Tasks::where("id", $id)->exists();
+    public function getProjectParticipants($id){
+        $projectParticipants= ProjectParticipants::where("p_id", $id)->get();
+        $success=[];
 
-        if(!$task){
+        foreach($projectParticipants as $p){
+            $findUser = User::where("id", $p->user_id)->first();
+            $findStatus = ProjectsStatus::where("id",$p->p_status)->first();
+            
+
+            $success[]=[
+                "id"=>$p->id,
+                "name"=>$findUser->name,
+                "email"=>$findUser->email,
+                "project_name"=>$p->p_name,
+                "status"=>$findStatus->task_status,
+            ];
+        }
+
+        if(!empty($success)){
+            return response()->json($success,200);
+        }else{
             $success=[   
-                "message"=>"Task does not exist!",
+                "message"=>"You have no participans in this project!",
                 "code"=>404,
             ];
             return response()->json($success,404);
-        }else{
-            $taskPartisipants = $task->projecParticipans()->get();
         }
+       
+    }
+    public function AssignEmpoyleeToTask(Request $request){
+        $validator = Validator::make($request->all(),[
+            "task_name" => "required",
+            "description" => "required",
+            "deadline"=> "required|date_format:Y.m.d|after_or_equal:today",
+            "project_id"=> "required",
+            "task_priority"=>"required"
+           
+        ]);
 
-    }  
+        if ($validator->fails()){
+            $response=[
+                "success" => false,
+                "message"=> $validator->errors()
+            ];
+            return response()->json($response, 400);
+        }
+    }
 
     public function createParticipants(Request $request){
 
@@ -420,6 +485,10 @@ class Api_Controller extends Controller
             return response()->json($success);
         }
     }
+
+    
+
+
 
 
 

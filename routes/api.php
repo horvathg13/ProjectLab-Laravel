@@ -36,6 +36,7 @@ Route::post("getprojects",[App\Http\Controllers\API\Api_Controller::class, "getP
 Route::post("bann-user/{id}",[App\Http\Controllers\RegisterControllers\RegisterController::class, "bannTheUser"]);
 Route::post("getpriorities",[App\Http\Controllers\API\Api_Controller::class, "getPriorities"]);
 Route::post("createtask",[App\Http\Controllers\API\Api_Controller::class, "createtask"]);
-Route::post("gettasks/{id}",[App\Http\Controllers\API\Api_Controller::class, "getTasks"]);
-Route::post("gettaskparticipants/{id}",[App\Http\Controllers\API\Api_Controller::class, "getTaskParticipants"]);
+Route::post("getprojectparticipants/{id}",[App\Http\Controllers\API\Api_Controller::class, "getProjectParticipants"]);
 Route::post("createparticipants",[App\Http\Controllers\API\Api_Controller::class, "createParticipants"]);
+Route::post("projects/{id}/tasks",[App\Http\Controllers\API\Api_Controller::class, "getTasks"]);
+Route::post("projects/{id}",[App\Http\Controllers\API\Api_Controller::class, "getProjectById"]);
