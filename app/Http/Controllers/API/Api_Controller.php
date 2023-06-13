@@ -439,10 +439,6 @@ class Api_Controller extends Controller
             "credentials" =>$credentials
         ];
 
-       /* $response = [
-            "success" => true,
-            "manó" => $data
-        ];*/
         return response()->json($success, 200);
     }
 
