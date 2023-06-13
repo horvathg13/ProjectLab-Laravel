@@ -9,7 +9,7 @@ class AssignedTask extends Model
 {
     use HasFactory;
 
-    protected $table = 'assigned_task';
+    protected $table = 'assigned_tasks';
 
     protected $fillable = [
         'task_id',

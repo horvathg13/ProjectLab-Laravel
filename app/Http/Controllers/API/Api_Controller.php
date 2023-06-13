@@ -421,41 +421,29 @@ class Api_Controller extends Controller
        
     }
     public function AssignEmpoyleeToTask(Request $request){
-        $validator = Validator::make($request->all(),[
-            "employee" => "required",
-            "toAttachTaskData" => "required",           
-        ]);
-
-        if ($validator->fails()){
-            $response=[
-                "success" => false,
-                "message"=> $validator->errors()
-            ];
-            return response()->json($response, 400);
-        }
-
-        $employee = $validator->validated()['employee'];
-        $Task= $validator->validated()['toAttachTaskData'];
-        $TaskId= null;
-
-        /*foreach($Task as $t){
-            $TaskId = $t["task_id"];
-        }
-        
+        $data = $request->json()->all();
         $credentials=[];
-        foreach($employee as $e){
-            $credentials[]=[
-                "task_id"=>$TaskId,
-                "p_participant_id"=>$e["id"],
-            ];
-            AssignedTask::create($credentials);
+
+        foreach($data as $d){
+            AssignedTask::create([
+                "task_id"=>$d['task_id'],
+                "p_participant_id"=>$d['id']
+            ]);
+          
         }
+ 
 
         $success=[   
             "message"=>"Task attach was successfull!",
             "code"=>200,
+            "credentials" =>$credentials
+        ];
+
+       /* $response = [
+            "success" => true,
+            "manó" => $data
         ];*/
-        return response();
+        return response()->json($success, 200);
     }
 
     public function createParticipants(Request $request){
