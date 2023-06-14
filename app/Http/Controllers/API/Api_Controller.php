@@ -13,6 +13,8 @@ use App\Models\TaskPriorities;
 use App\Models\Tasks;
 use App\Models\TaskStatus;
 use App\Models\User;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 use GrahamCampbell\ResultType\Success;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
@@ -439,6 +441,40 @@ class Api_Controller extends Controller
             "credentials" =>$credentials
         ];
 
+        return response()->json($success, 200);
+    }
+
+    public function AttachMyself($project_id, $task_id, $token){
+        $topSecret = env('JWT_SECRET');
+        $decodeToken = JWT::decode($token, new Key($topSecret, 'HS256'));
+        $userId = $decodeToken->sub;
+        $check = [];
+        $chekId = null;
+        $check = ProjectParticipants::where(["p_id"=> $project_id,
+                                            "user_id"=> $userId,
+                                            ])->get();
+
+        if($check->count() > 0){
+           foreach($check as $c){
+            $chekId = $c['id'];
+           }
+           AssignedTask::create([
+                "task_id"=>$task_id,
+                "p_participant_id"=>$chekId
+            ]);
+            $success = [
+                "message"=>"Task attach was successfull!",
+                "code"=>200,
+            ];
+        }else{
+            $success = [
+                "message"=>"You have no permission to this task!",
+                "code"=>500,
+            ];
+            return response()->json($success, 500);
+        }
+       
+       
         return response()->json($success, 200);
     }
 
