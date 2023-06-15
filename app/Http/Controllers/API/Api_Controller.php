@@ -445,13 +445,13 @@ class Api_Controller extends Controller
     }
 
     public function AttachMyself($project_id, $task_id, $token){
-        $topSecret = env('JWT_SECRET');
-        $decodeToken = JWT::decode($token, new Key($topSecret, 'HS256'));
-        $userId = $decodeToken->sub;
-        $check = [];
+        
+        $user = JWTAuth::parseToken()->authenticate();
+        
+        
         $chekId = null;
         $check = ProjectParticipants::where(["p_id"=> $project_id,
-                                            "user_id"=> $userId,
+                                            "user_id"=> $user->id,
                                             ])->get();
 
         if($check->count() > 0){
