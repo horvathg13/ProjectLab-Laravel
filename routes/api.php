@@ -42,3 +42,4 @@ Route::post("projects/{id}/tasks",[App\Http\Controllers\API\Api_Controller::clas
 Route::post("projects/{id}",[App\Http\Controllers\API\Api_Controller::class, "getProjectById"]);
 Route::post("assign-employee-to-task",[App\Http\Controllers\API\Api_Controller::class, "AssignEmpoyleeToTask"]);
 Route::post("projects/{project_id}/tasks/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "AttachMyself"]);
+Route::post("getActiveEmployees/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "getActiveEmployees"]);

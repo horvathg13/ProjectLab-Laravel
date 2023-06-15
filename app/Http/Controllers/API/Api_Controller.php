@@ -526,6 +526,42 @@ class Api_Controller extends Controller
         }
     }
 
+    public function getActiveEmployees($task_id){
+        $findTask = Tasks::find($task_id);
+
+        if($findTask){
+            $participants = $findTask-> projectParticipants()->get();
+            $success=[];
+            foreach($participants as $p){
+                $findUser = User::where("id", $p['user_id'])->first();
+
+                $success[]=[
+                    "id"=>$findUser->id,
+                    "name"=> $findUser->name,
+                    "email"=> $findUser->email,
+                ];
+
+               
+            }
+
+            return response()->json($success);
+            
+        }else{
+            $success[]=[
+                "message"=> "Task does not exists."
+            ];
+
+            return response()->json($success);
+        }
+
+        
+    }
+
+    public function detachUser($id){
+        
+    }
+
+
     
 
 
