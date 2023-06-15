@@ -444,7 +444,7 @@ class Api_Controller extends Controller
         return response()->json($success, 200);
     }
 
-    public function AttachMyself($project_id, $task_id, $token){
+    public function AttachMyself($project_id, $task_id){
         
         $user = JWTAuth::parseToken()->authenticate();
         
