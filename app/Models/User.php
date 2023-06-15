@@ -52,11 +52,11 @@ class User extends Authenticatable implements JWTSubject
     }
 
     public function projects(){
-        return $this->hasMany(Prejects::class);
+        return $this->hasMany(Projects::class);
     }
 
     public function projectParticipants(){
-        return $this->hasMany(PrejectParticipans::class);
+        return $this->hasMany(ProjectParticipans::class);
     }
 
     public function files(){

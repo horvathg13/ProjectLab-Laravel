@@ -33,7 +33,7 @@ class Tasks extends Model
     }
 
     public function projectParticipants(){
-        return $this-> belongsToMany(projectParticipants::class, "assign_tasks", "task_id", "participant_id" );
+        return $this-> belongsToMany(ProjectParticipants::class, "assigned_tasks", "task_id", "p_participant_id" );
     }
 
     public function chatMessage(){

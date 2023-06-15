@@ -23,6 +23,6 @@ class ProjectParticipants extends Model
     }
 
     public function tasks(){
-        return $this-> belongsToMany(Tasks::class, "assign_tasks", "p_participant_id", "task_id");
+        return $this-> belongsToMany(Tasks::class, "assigned_tasks", "p_participant_id", "task_id");
     }
 }
