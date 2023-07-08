@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
 use App\Models\AssignedTask;
+use App\Models\ChatMessages;
 use App\Models\ProjectParticipants;
 use App\Models\Projects;
 use App\Models\ProjectsStatus;
@@ -557,8 +558,83 @@ class Api_Controller extends Controller
         
     }
 
-    public function detachUser($id){
+    public function detachUser($projectId, $taskId, $userId){
+        $participant = ProjectParticipants::where(["user_id"=>$userId,
+                                                    "p_id"=> $projectId])->first();
+
+        if($participant === null){
+            $return=[
+                "message" => "Datasbase error: User does not found."
+            ];
+            return response()->json($return);
+        }else{
+            $findAssignedTask = AssignedTask::where([
+                "task_id"=>$taskId,
+                "p_participant_id"=>$participant->id
+            ])->first();
+
+            if($findAssignedTask !== null){
+                $findAssignedTask->delete();
+                $success=[
+                "message" => "User detach from this task"
+                ];
+                return response()->json($success,200);
+            }else{
+                $success=[
+                "message" => "Datasbase error: Task or user does not found."
+                ];
+                return response()->json($success);
+            }
+        }
+
         
+
+        
+       
+    }
+    public function SendMessage($emitData, $projectId){
+        $emit = json_decode($emitData);
+       
+        $message = $emit->message;
+        $data = $emit->data;
+        $participants = $emit->participants;
+
+        if($participants != null && $message != null && $data != null){
+            $user = JWTAuth::parseToken()->authenticate();
+
+            foreach($participants as $p){
+                $create = ChatMessages::create([
+                    "p_id"=> $projectId,
+                    "task_id"=>$data->id,
+                    "sender_id"=>$user->id,
+                    "receiver_id"=>$p->id,
+                    "message"=>$message,
+
+                ]);
+            }
+            $create= true;
+            if(!$create){
+                $success=[   
+                    "message"=>"Fail under create participants",
+                    "code"=>500,
+                ];
+                return response()->json($success);
+            }else{
+                $success=[   
+                    "message"=>"Thats it! Participants created Successfull",
+                    "code"=>200,
+                    
+                ];
+
+                return response()->json($success);
+            }
+        }else{
+            $fail=[
+                "message" => "Undefined data sent."
+            ];
+            return response()->json($fail);
+        }
+       
     }
 
 

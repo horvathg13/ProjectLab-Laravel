@@ -14,7 +14,8 @@ class ChatMessages extends Model
         'p_id', 
         'task_id',
         'sender_id',
-        'receiver_id'
+        'receiver_id',
+        'message'
     ];
 
     public function users_send(){
