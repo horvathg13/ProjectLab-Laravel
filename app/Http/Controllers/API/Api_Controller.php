@@ -401,14 +401,15 @@ class Api_Controller extends Controller
         foreach($projectParticipants as $p){
             $findUser = User::where("id", $p->user_id)->first();
             $findStatus = ProjectsStatus::where("id",$p->p_status)->first();
-            
+            $findProjectname = Projects::where("id", $p->p_id)->first();
 
             $success[]=[
                 "id"=>$p->id,
+                "userId"=>$findUser->id,
                 "name"=>$findUser->name,
                 "email"=>$findUser->email,
-                "project_name"=>$p->p_name,
-                "status"=>$findStatus->task_status,
+                "project_name"=>$findProjectname->p_name,
+                "status"=>$findStatus->p_status,
             ];
         }
 
@@ -602,6 +603,8 @@ class Api_Controller extends Controller
         if($participants != null && $message != null && $data != null){
             $user = JWTAuth::parseToken()->authenticate();
 
+           
+        
             foreach($participants as $p){
                 $create = ChatMessages::create([
                     "p_id"=> $projectId,
@@ -635,6 +638,67 @@ class Api_Controller extends Controller
             return response()->json($fail);
         }
        
+    }
+    public function QueryMessages($projectId, $taskId){
+
+        if (empty($taskId)){
+            $user = JWTAuth::parseToken()->authenticate();
+            $findMessage = ChatMessages::where(["p_id" => $projectId,
+            "task_id"=> null, "sender_id"=>$user->id])->get();
+            $Messages=[];
+            foreach($findMessage as $m){
+                $findProject = Projects::where("id", $projectId)->first();
+                $findReceiver = User::where("id", $m->receiver_id)->first();
+                $findManager = User::where("id", $findProject->p_manager_id)->first();
+
+
+                $Messages[]=[
+                    "project_id" => $findProject->id,
+                    "project_name"=> $findProject->p_name,
+                    "project_manager_id"=>$findManager->id,
+                    "project_manager"=> $findManager->name,
+                    "project_status"=> $findProject->p_status,
+                    "receiver_id"=>$findReceiver->id,
+                    "receiver_name"=>$findReceiver->name,
+                    "receiver_email"=>$findReceiver->email,
+                    "message"=>$m->message,
+                ];
+                
+
+            }
+            return response()->json($Messages,200);
+        }else{
+            $findMessage = ChatMessages::where(["p_id" => $projectId,
+            "task_id"=> $taskId])->get();
+            $success=[];
+            foreach($findMessage as $m){
+                $findProject = Projects::where("id", $projectId)->first();
+                $findTask = Tasks::where("id", $taskId)->first();
+                $findSernder = User::where("id", $m->sender_id)->first();
+                $findReceiver = User::where("id", $m->receiver_id)->first();
+                $findManager = User::where("id", $findProject->p_manager_id)->first();
+
+
+                $success[]=[
+                    "project_id" => $findProject->id,
+                    "project_name"=> $findProject->p_name,
+                    "project_manager_id"=>$findManager->id,
+                    "project_manager"=> $findManager->name,
+                    "project_status"=> $findProject->p_status,
+                    "task_id"=>$m->task_id,
+                    "task_name"=>$findTask->task_name,
+                    "sender_id"=> $findSernder->id,
+                    "sender_name"=>$findSernder->name,
+                    "sender_email"=>$findSernder->email,
+                    "receiver_id"=>$findReceiver->id,
+                    "receiver_name"=>$findReceiver->name,
+                    "receiver_email"=>$findReceiver->email,
+                    "message"=>$m->message,
+                ];
+
+            }
+            return response()->json($success,200);
+        }
     }
 
 

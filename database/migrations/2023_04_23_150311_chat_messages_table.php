@@ -17,7 +17,7 @@ class ChatMessagesTable extends Migration
             $table->id();
             $table->unsignedBigInteger("p_id");
             $table->foreign("p_id")->references("id")->on("projects");
-            $table->unsignedBigInteger("task_id");
+            $table->unsignedBigInteger("task_id")->nullable();
             $table->foreign("task_id")->references("id")->on("tasks");
             $table->unsignedBigInteger("sender_id");
             $table->foreign("sender_id")->references("id")->on("users");

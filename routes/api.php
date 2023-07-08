@@ -45,3 +45,4 @@ Route::post("projects/{project_id}/tasks/{task_id}",[App\Http\Controllers\API\Ap
 Route::post("getActiveEmployees/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "getActiveEmployees"]);
 Route::post("detach/{projectId}/{taskId}/{userId}",[App\Http\Controllers\API\Api_Controller::class, "detachUser"]);
 Route::post("send-message/{emitData}/{projectId}",[App\Http\Controllers\API\Api_Controller::class, "sendMessage"]);
+Route::post("query-message/project-id/{projectId}/task-id/{taskId}",[App\Http\Controllers\API\Api_Controller::class, "QueryMessages"]);
