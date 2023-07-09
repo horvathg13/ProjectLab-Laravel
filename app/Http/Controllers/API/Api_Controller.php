@@ -426,7 +426,7 @@ class Api_Controller extends Controller
     }
     public function AssignEmpoyleeToTask(Request $request){
         $data = $request->json()->all();
-        $credentials=[];
+        
 
         foreach($data as $d){
             AssignedTask::create([
@@ -440,7 +440,7 @@ class Api_Controller extends Controller
         $success=[   
             "message"=>"Task attach was successfull!",
             "code"=>200,
-            "credentials" =>$credentials
+            
         ];
 
         return response()->json($success, 200);
