@@ -639,65 +639,189 @@ class Api_Controller extends Controller
         }
        
     }
-    public function QueryMessages($projectId, $taskId){
+    public function getMessages($projectId,$taskId,$participants){
 
         if (empty($taskId)){
             $user = JWTAuth::parseToken()->authenticate();
-            $findMessage = ChatMessages::where(["p_id" => $projectId,
-            "task_id"=> null, "sender_id"=>$user->id])->get();
-            $Messages=[];
-            foreach($findMessage as $m){
-                $findProject = Projects::where("id", $projectId)->first();
+            $filteredParticipants = json_decode($participants,true);
+
+            $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] !== $user->id);
+            
+          
+            $OtherUserMessages=[];
+            foreach($filteredParticipants as $fp){
+                $findOtherUserMessages= ChatMessages::where(["p_id" => $projectId,
+                "task_id"=> null, "sender_id"=>$fp['id'], "receiver_id"=>$fp['id']])->orderBy('created_at', 'asc')->get();;
+                foreach($findOtherUserMessages as $foum){
+
+                
+                    $findReceiver = User::where("id", $foum->receiver_id)->first();
+                    $findSender = User::where("id", $foum->sender_id)->first();
+
+
+                    $OtherUserMessages[]=[
+                        
+                        "sender_id"=>$findSender->id,
+                        "sender_name"=>$findSender->name,
+                        "receiver_id"=>$findReceiver->id,
+                        "receiver_name"=>$findReceiver->name,
+                        "receiver_email"=>$findReceiver->email,
+                        "message"=>$foum->message,
+                        "created_at"=>$foum->created_at
+                    ];
+                }
+            }
+            
+            $findOwnMessage = ChatMessages::where(["p_id" => $projectId,
+            "task_id"=> null, "sender_id"=>$user->id, "receiver_id"=>$user->id])->orderBy('created_at', 'asc')->get();
+                            
+            $OwnMessage=[];
+            
+            foreach($findOwnMessage as $m){
                 $findReceiver = User::where("id", $m->receiver_id)->first();
-                $findManager = User::where("id", $findProject->p_manager_id)->first();
+                $findSender = User::where("id", $m->sender_id)->first();
 
 
-                $Messages[]=[
-                    "project_id" => $findProject->id,
-                    "project_name"=> $findProject->p_name,
-                    "project_manager_id"=>$findManager->id,
-                    "project_manager"=> $findManager->name,
-                    "project_status"=> $findProject->p_status,
+                $OwnMessage[]=[
+                  
+                    "sender_id"=>$findSender->id,
+                    "sender_name"=>$findSender->name,
                     "receiver_id"=>$findReceiver->id,
                     "receiver_name"=>$findReceiver->name,
                     "receiver_email"=>$findReceiver->email,
                     "message"=>$m->message,
+                    "created_at"=>$m->created_at
                 ];
                 
 
             }
-            return response()->json($Messages,200);
+            $allMessages=[];
+            
+            foreach($OwnMessage as $om){
+               $allMessages[]=
+               [
+                "sender_id" => $om["sender_id"],
+                "sender_name" => $om["sender_name"],
+                "receiver_id" => $om["receiver_id"],
+                "receiver_name" => $om["receiver_name"],
+                "receiver_email" => $om["receiver_email"],
+                "message" => $om["message"],
+                "created_at"=>$om['created_at']
+               ];
+            }
+            foreach ($OtherUserMessages as $otm) {
+                $allMessages[] = [
+                    "sender_id" => $otm["sender_id"],
+                    "sender_name" => $otm["sender_name"],
+                    "receiver_id" => $otm["receiver_id"],
+                    "receiver_name" => $otm["receiver_name"],
+                    "receiver_email" => $otm["receiver_email"],
+                    "message" => $otm["message"],
+                    "created_at" => $otm["created_at"]
+                ];
+            }
+            
+            usort($allMessages, function ($a, $b) {
+                return strtotime($a['created_at']) - strtotime($b['created_at']);
+            });
+            $success=[
+                "messageData"=> $allMessages,
+                "currentUser_id"=> $user->id,
+                "message"=>"Message Query was Successfull!"
+            ];
+            
+            return response()->json($success, 200);
+           
         }else{
-            $findMessage = ChatMessages::where(["p_id" => $projectId,
-            "task_id"=> $taskId])->get();
-            $success=[];
-            foreach($findMessage as $m){
-                $findProject = Projects::where("id", $projectId)->first();
-                $findTask = Tasks::where("id", $taskId)->first();
-                $findSernder = User::where("id", $m->sender_id)->first();
+            $user = JWTAuth::parseToken()->authenticate();
+            $filteredParticipants = json_decode($participants,true);
+
+            $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] !== $user->id);
+            
+          
+            $OtherUserMessages=[];
+            foreach($filteredParticipants as $fp){
+                $findOtherUserMessages= ChatMessages::where(["p_id" => $projectId,
+                "task_id"=> $taskId, "sender_id"=>$fp['id'], "receiver_id"=>$fp['id']])->orderBy('created_at', 'asc')->get();
+                foreach($findOtherUserMessages as $foum){
+
+                
+                    $findReceiver = User::where("id", $foum->receiver_id)->first();
+                    $findSender = User::where("id", $foum->sender_id)->first();
+
+
+                    $OtherUserMessages[]=[
+                        
+                        "sender_id"=>$findSender->id,
+                        "sender_name"=>$findSender->name,
+                        "receiver_id"=>$findReceiver->id,
+                        "receiver_name"=>$findReceiver->name,
+                        "receiver_email"=>$findReceiver->email,
+                        "message"=>$foum->message,
+                        "created_at"=>$foum->created_at
+                    ];
+                }
+            }
+            
+            $findOwnMessage = ChatMessages::where(["p_id" => $projectId,
+            "task_id"=> $taskId, "sender_id"=>$user->id, "receiver_id"=>$user->id])->orderBy('created_at', 'asc')->get();
+                            
+            $OwnMessage=[];
+            
+            foreach($findOwnMessage as $m){
                 $findReceiver = User::where("id", $m->receiver_id)->first();
-                $findManager = User::where("id", $findProject->p_manager_id)->first();
+                $findSender = User::where("id", $m->sender_id)->first();
 
 
-                $success[]=[
-                    "project_id" => $findProject->id,
-                    "project_name"=> $findProject->p_name,
-                    "project_manager_id"=>$findManager->id,
-                    "project_manager"=> $findManager->name,
-                    "project_status"=> $findProject->p_status,
-                    "task_id"=>$m->task_id,
-                    "task_name"=>$findTask->task_name,
-                    "sender_id"=> $findSernder->id,
-                    "sender_name"=>$findSernder->name,
-                    "sender_email"=>$findSernder->email,
+                $OwnMessage[]=[
+                  
+                    "sender_id"=>$findSender->id,
+                    "sender_name"=>$findSender->name,
                     "receiver_id"=>$findReceiver->id,
                     "receiver_name"=>$findReceiver->name,
                     "receiver_email"=>$findReceiver->email,
                     "message"=>$m->message,
+                    "created_at"=>$m->created_at
                 ];
+                
 
             }
-            return response()->json($success,200);
+            $allMessages=[];
+            
+            foreach($OwnMessage as $om){
+               $allMessages[]=
+               [
+                "sender_id" => $om["sender_id"],
+                "sender_name" => $om["sender_name"],
+                "receiver_id" => $om["receiver_id"],
+                "receiver_name" => $om["receiver_name"],
+                "receiver_email" => $om["receiver_email"],
+                "message" => $om["message"],
+                "created_at"=>$om['created_at']
+               ];
+            }
+            foreach ($OtherUserMessages as $otm) {
+                $allMessages[] = [
+                    "sender_id" => $otm["sender_id"],
+                    "sender_name" => $otm["sender_name"],
+                    "receiver_id" => $otm["receiver_id"],
+                    "receiver_name" => $otm["receiver_name"],
+                    "receiver_email" => $otm["receiver_email"],
+                    "message" => $otm["message"],
+                    "created_at" => $otm["created_at"]
+                ];
+            }
+            
+            usort($allMessages, function ($a, $b) {
+                return strtotime($a['created_at']) - strtotime($b['created_at']);
+            });
+            $success=[
+                "messageData"=> $allMessages,
+                "currentUser_id"=> $user->id,
+                "message"=>"Message Query was Successfull!"
+            ];
+            
+            return response()->json($success, 200);
         }
     }
 
