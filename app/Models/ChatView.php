@@ -10,6 +10,7 @@ class ChatView extends Model
     use HasFactory;
 
     protected $table = 'chat_messages_viewing';
+    public $timestamps = true;
 
     protected $fillable = [
         'chat_id', 
