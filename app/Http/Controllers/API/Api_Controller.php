@@ -175,6 +175,7 @@ class Api_Controller extends Controller
             "p_name" => "required",
             "p_manager_id" => "required",
             "date"=> "required|date_format:Y.m.d|after_or_equal:today",
+            "p_id"=>"nullable"
            
         ]);
 
@@ -185,35 +186,57 @@ class Api_Controller extends Controller
             ];
             return response()->json($response, 400);
         }
+        if($validator->validated()['p_id'] != 0){
+            $findProject = Projects::where(["id"=>$validator->validated()['p_id']])->first();
+            if($findProject != null){
+                $status = ProjectsStatus::where("p_status", "Active")->first();
+                $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
 
-        $status = ProjectsStatus::where("p_status", "Active")->first();
-        
-        $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
+                $update= $findProject->update([
+                    "p_name" => $validator->validated()['p_name'],
+                    "p_manager_id" => $validator->validated()['p_manager_id'],
+                    "deadline" => $formattedDate,
+                    "p_status" => $status->id
 
-        $credentials=[
-            "p_name" => $validator->validated()['p_name'],
-            "p_manager_id" => $validator->validated()['p_manager_id'],
-            "deadline" => $formattedDate,
-            "p_status" => $status->id
-        ];
+                ]);
+                $success=[
+                    "message"=>"Update Successfull",
+                    "data"=>$update,
+                ];
 
-        $create = Projects::create($credentials);
-
-        if(!$create){
-            $success=[   
-                "message"=>"Fail under create project",
-                "code"=>404,
-            ];
-            return response()->json($success);
+                 return response()->json($success);
+            }   
         }else{
-            $success=[   
-                "message"=>"Thats it!",
-                "code"=>200,
-                "date"=>$formattedDate
+            $status = ProjectsStatus::where("p_status", "Active")->first();
+            
+            $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
+
+            $credentials=[
+                "p_name" => $validator->validated()['p_name'],
+                "p_manager_id" => $validator->validated()['p_manager_id'],
+                "deadline" => $formattedDate,
+                "p_status" => $status->id
             ];
 
-            return response()->json($success);
-        }
+            $create = Projects::create($credentials);
+
+            if(!$create){
+                $success=[   
+                    "message"=>"Fail under create project",
+                    "code"=>404,
+                ];
+                return response()->json($success);
+            }else{
+                $success=[   
+                    "message"=>"Thats it!",
+                    "code"=>200,
+                    "date"=>$formattedDate
+                ];
+
+                return response()->json($success);
+            }
+        }     
+        
         
     }
 
@@ -230,7 +253,9 @@ class Api_Controller extends Controller
 
             $success[] =[
                 "project_id" => $project->id,
+                "manager_id"=>$project->p_manager_id,
                 "manager" => $findManager->name,
+                "manager_email"=>$findManager->email,
                 "name"=>$project->p_name,
                 "status"=>$findStatus->p_status,
                 "deadline"=>$project->deadline
@@ -287,9 +312,11 @@ class Api_Controller extends Controller
             "description" => "required",
             "deadline"=> "required|date_format:Y.m.d|after_or_equal:today",
             "project_id"=> "required",
-            "task_priority"=>"required"
+            "task_priority"=>"required",
+            "task_id"=>"nullable"
            
         ]);
+        
 
         if ($validator->fails()){
             $response=[
@@ -299,40 +326,66 @@ class Api_Controller extends Controller
             return response()->json($response, 400);
         }
 
-        $uniqueTaskName = Tasks::where("task_name",$validator->validated()['task_name'])->exists();
+       /* $uniqueTaskName = Tasks::where("task_name",$validator->validated()['task_name'])->exists();
 
         if($uniqueTaskName){
             $fail=[
                 "message"=> "Name is not unique"
             ];
-            return response()->json($fail,500);
-        }else{
-             $create= Tasks::create([
-            "task_name"=>$validator->validated()['task_name'],
-            "deadline"=>$validator->validated()['deadline'],
-            "description"=>$validator->validated()['description'],
-            "p_id"=>$validator->validated()['project_id'],
-            "t_status"=>3,
-            "t_priority"=>$validator->validated()['task_priority'],
+            return response()->json($fail,500);*/
 
-        ]);
+        if($validator->validated()['task_id'] != 0){
+            $findTask = Tasks::where(["id"=>$validator->validated()['task_id'], "p_id"=>$validator->validated()['project_id']])->first();
+            if($findTask != null){
+                $update= $findTask->update([
+                    "task_name"=>$validator->validated()['task_name'],
+                    "deadline"=>$validator->validated()['deadline'],
+                    "description"=>$validator->validated()['description'],
+                    "p_id"=>$validator->validated()['project_id'],
+                    "t_status"=>3,
+                    "t_priority"=>$validator->validated()['task_priority'],
 
-        if(!$create){
-            $success=[   
-                "message"=>"Fail under create task",
-                "code"=>500,
-            ];
-            return response()->json($success);
-        }else{
-            $success=[   
-                "message"=>"Thats it! Task created Successfull",
-                "code"=>200,
+                ]);
+                $success=[
+                    "message"=>"Update Successfull",
+                    "data"=>$update,
+                ];
                 
-            ];
+                return response()->json($success);
+            }    
+        }else{
+            $create= Tasks::create([
+                "task_name"=>$validator->validated()['task_name'],
+                "deadline"=>$validator->validated()['deadline'],
+                "description"=>$validator->validated()['description'],
+                "p_id"=>$validator->validated()['project_id'],
+                "t_status"=>3,
+                "t_priority"=>$validator->validated()['task_priority'],
 
-            return response()->json($success);
+            ]);
+
+            if(!$create){
+                $success=[   
+                    "message"=>"Fail under create task",
+                    "code"=>500,
+                ];
+                return response()->json($success);
+            }else{
+                $success=[   
+                    "message"=>"Thats it! Task created Successfull",
+                    "code"=>200,
+                    
+                ];
+
+                return response()->json($success);
+            }
+            
+
+
         }
-        }
+        
+        
+        
     }    
 
     public function getProjectById($id){
@@ -385,6 +438,7 @@ class Api_Controller extends Controller
                 "dedadline"=>$task->deadline,
                 "description"=>$task->description,
                 "status"=>$findStatus->task_status,
+                "priority_id"=>$findPriority->id,
                 "priority"=>$findPriority->task_priority,
             ];
         }
@@ -657,7 +711,7 @@ class Api_Controller extends Controller
         if (empty($taskId)){
             $user = JWTAuth::parseToken()->authenticate();
             $filteredParticipants = json_decode($participants,true);
-            if(isEmpty($filteredParticipants)){
+            if(empty($filteredParticipants)){
                 throw new Exception('No participants in this project');
             }
             $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] !== $user->id);
