@@ -47,3 +47,5 @@ Route::post("detach/{projectId}/{taskId}/{userId}",[App\Http\Controllers\API\Api
 Route::post("send-message/{emitData}/{projectId}",[App\Http\Controllers\API\Api_Controller::class, "sendMessage"]);
 Route::post("get-messages/project-id/{projectId}/task-id/{taskId}/participants/{participants}",[App\Http\Controllers\API\Api_Controller::class, "getMessages"]);
 Route::post("get-unread-messages",[App\Http\Controllers\API\Api_Controller::class, "getUnreadMessages"]);
+Route::post("get-buttons/{projecId}",[App\Http\Controllers\API\Api_Controller::class, "getProjectandTaskButtons"]);
+Route::post("get-users-buttons",[App\Http\Controllers\API\Api_Controller::class, "getUsersButton"]);

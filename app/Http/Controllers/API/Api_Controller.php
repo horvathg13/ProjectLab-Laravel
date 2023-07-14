@@ -24,11 +24,13 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use ProjectsTable;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 use function PHPUnit\Framework\isEmpty;
+use function PHPUnit\Framework\throwException;
 
 class Api_Controller extends Controller
 {
@@ -1111,7 +1113,112 @@ class Api_Controller extends Controller
 
     }
 
+    public function getProjectandTaskButtons($ProjectId){
+        $user= JWTAuth::parseToken()->authenticate();
+        $json_data=Storage::get("buttons/buttons.json");
+        $buttons = json_decode($json_data, true);
+        $getGlobalRoles = [];
+        $haveProjectManagerRole = false;
+        $haveProjectParticipantRole = false;
+        $haveAdminRole = false;
+        $ManagerButtons = $buttons["manager"];
+        $EmployeeButtons = $buttons["employee"];
+        $AdminButtons = $buttons["admin"];
+        $messages=[];
+        $success=[];
 
+        $users = User::where("id", $user->id)->get();
+            
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+
+            
+            $getGlobalRoles[] = [
+               "roles" => $globalRoles,
+            ];
+        }
+       
+        $getProject = Projects::where("id", $ProjectId)->first();
+        $haveProjectManagerRole = $globalRoles->contains('Manager');
+        $haveAdminRole = $globalRoles->contains('Admin');
+
+        if($getProject["p_manager_id"] == $user->id && $haveProjectManagerRole == true){
+            
+                
+            $haveProjectManagerRole = true;
+            
+            $success[]=[
+                "manager"=>$ManagerButtons,
+                "message"=> "Welcome, Manager!"
+            ];
+                
+            
+            
+        }else{
+            $getParticipantRole = ProjectParticipants::where(["user_id"=> $user->id, "p_id"=>$ProjectId])->exists();
+            if($getParticipantRole==true){
+                $haveProjectParticipantRole = true;
+                $success[]=[
+                    "employee"=> $EmployeeButtons,
+                    "message"=> "You can access!"
+                ];
+            }else{
+                $success[]=[
+                    "message"=> "You have no access permission!"
+                ];
+            }
+        }
+
+        if($haveAdminRole == true){
+            
+            $haveAdminRole = true;
+            $success[]=[
+                "admin"=>$AdminButtons,
+            ];
+            
+        }
+        
+
+       
+        return response()->json($success,200);
+
+    }
+
+    public function getUsersButton(){
+        $user=JWTAuth::parseToken()->authenticate();
+        $json_data=Storage::get("buttons/buttons.json");
+        $buttons = json_decode($json_data, true);
+        $AdminButtons = $buttons["admin"];
+        $getGlobalRoles=[];
+        $success=[];
+
+        $users = User::where("id", $user->id)->get();
+            
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+
+            
+            $getGlobalRoles[] = [
+               "roles" => $globalRoles,
+            ];
+        }
+
+        $haveAdminRole = $globalRoles->contains('Admin');
+
+        if($haveAdminRole == true){
+            $success[]=[
+                "admin"=>$AdminButtons,
+                "message"=>"You can access to admin buttons!"
+            ];
+        }else{
+            
+            throw new Exception("Access denid");
+        }
+
+        return response()->json($success,200);
+    }
     
 
 
