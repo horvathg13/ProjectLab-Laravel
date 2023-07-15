@@ -826,7 +826,7 @@ class Api_Controller extends Controller
         }else{
             $user = JWTAuth::parseToken()->authenticate();
             $filteredParticipants = json_decode($participants,true);
-            if(isEmpty($filteredParticipants)){
+            if(empty($filteredParticipants)){
                 throw new Exception('No participants in this task');
                 /*return response()->json([
                     "message"=>"No participants in this task!"
