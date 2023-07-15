@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use ProjectsTable;
+use Symfony\Component\VarDumper\VarDumper;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 use function PHPUnit\Framework\isEmpty;
@@ -1126,6 +1127,7 @@ class Api_Controller extends Controller
         $AdminButtons = $buttons["admin"];
         $messages=[];
         $success=[];
+        $superUser=[];
 
         $users = User::where("id", $user->id)->get();
             
@@ -1147,9 +1149,11 @@ class Api_Controller extends Controller
             
                 
             $haveProjectManagerRole = true;
+            $haveProjectParticipantRole = true;
             
             $success[]=[
                 "manager"=>$ManagerButtons,
+                "employee"=>$EmployeeButtons,
                 "message"=> "Welcome, Manager!"
             ];
                 
@@ -1170,7 +1174,20 @@ class Api_Controller extends Controller
             }
         }
 
-        if($haveAdminRole == true){
+        
+        if (
+            $haveAdminRole ==true && 
+            $haveProjectParticipantRole ==true &&  
+            $haveProjectManagerRole ==true
+            ){
+            
+            $superUser[]=[
+                "employee"=>$EmployeeButtons,
+                "manager"=>$ManagerButtons
+            ];
+
+            return response()->json($superUser,200);    
+        }else if($haveAdminRole == true){
             
             $haveAdminRole = true;
             $success[]=[
@@ -1178,7 +1195,6 @@ class Api_Controller extends Controller
             ];
             
         }
-        
 
        
         return response()->json($success,200);
