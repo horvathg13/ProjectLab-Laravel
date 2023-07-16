@@ -49,3 +49,6 @@ Route::post("get-messages/project-id/{projectId}/task-id/{taskId}/participants/{
 Route::post("get-unread-messages",[App\Http\Controllers\API\Api_Controller::class, "getUnreadMessages"]);
 Route::post("get-buttons/{projecId}",[App\Http\Controllers\API\Api_Controller::class, "getProjectandTaskButtons"]);
 Route::post("get-users-buttons",[App\Http\Controllers\API\Api_Controller::class, "getUsersButton"]);
+Route::post("get-status/{ProjectId}/{TaskId}",[App\Http\Controllers\API\Api_Controller::class, "getStatus"]);
+Route::post("set-status/{ProjectId}/{TaskId}/{StatusId}/{SetAll}",[App\Http\Controllers\API\Api_Controller::class, "setStatus"]);
+Route::post("filter-status/{ProjectId}/{Task}/{StatusId}",[App\Http\Controllers\API\Api_Controller::class, "statusFilterProjectOrTask"]);

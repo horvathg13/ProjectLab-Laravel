@@ -26,11 +26,13 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use ProjectsTable;
 use Symfony\Component\VarDumper\VarDumper;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 use function PHPUnit\Framework\isEmpty;
+use function PHPUnit\Framework\isNull;
 use function PHPUnit\Framework\throwException;
 
 class Api_Controller extends Controller
@@ -689,13 +691,13 @@ class Api_Controller extends Controller
             $create= true;
             if(!$create){
                 $success=[   
-                    "message"=>"Fail under create participants",
+                    "message"=>"Fail under sending message!",
                     "code"=>500,
                 ];
                 return response()->json($success);
             }else{
                 $success=[   
-                    "message"=>"Thats it! Participants created Successfull",
+                    "message"=>"That's it!",
                     "code"=>200,
                     
                 ];
@@ -1241,8 +1243,204 @@ class Api_Controller extends Controller
 
         return response()->json($success,200);
     }
-    
 
+    public function getStatus($ProjectId, $TaskId){
+        $data = [
+            'ProjectId' => $ProjectId,
+            'TaskId' => $TaskId,
+        ];
+    
+        $rules = [
+            'ProjectId' => 'required',
+            'TaskId' => 'nullable',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $success=[];
+
+        if(isNull($TaskId)){
+            $getProjectsStatus = ProjectsStatus::all();
+            $success[]=[
+                "message"=>"That's it!",
+                "status"=>$getProjectsStatus
+            ];
+            return response()->json($success,200);
+        }else{
+            $getTasksStatus = TaskStatus::all();
+            $success[]=[
+                "message"=>"That's it!",
+                "status"=>$getTasksStatus
+            ];
+            return response()->json($success,200);
+        }
+    }
+    
+    public function setStatus($ProjectId, $TaskId, $StatusId,$SetAll){
+        $data = [
+            'ProjectId' => $ProjectId,
+            'TaskId' => $TaskId,
+            'StatusId'=>$StatusId,
+            'SetAll'=>$SetAll,
+        ];
+    
+        $rules = [
+            'ProjectId' => 'required',
+            'TaskId' => 'nullable',
+            'StatusId'=>'required',
+            'SetAll'=>'required|boolean'
+        ];
+    
+        $validator = Validator::make($data, $rules);
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $success=[];
+        if(isNull($TaskId)){
+            $findProject= Projects::where("id", $ProjectId)->first();
+            if(!empty($findProject)){
+                
+
+                $findProject->touch();
+                $findProject->update([
+                    "p_status"=>$StatusId
+                ]);
+                
+                if($SetAll == true){
+                    $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
+                    foreach($findProjectTasks as $task){
+                        $task->touch();
+                        $task->update([
+                            "t_status"=>$StatusId
+                        ]);
+                    }
+                }
+                $success[]=[
+                    "message"=>"Update Successfull!",
+                ];
+                return response()->json($success,200);
+            }
+
+        }else{
+            if($SetAll == false){
+                $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
+                
+                $findProjectTasks->touch();
+                $findProjectTasks->update([
+                        "t_status"=>$StatusId
+                ]);
+                $success[]=[
+                    "message"=>"Update Successfull!",
+                ];
+                return response()->json($success,200);
+            }else{
+                $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
+                foreach($findProjectTasks as $task){
+                    $task->touch();
+                    $task->update([
+                        "t_status"=>$StatusId
+                    ]);
+                }
+                $success[]=[
+                    "message"=>"Update Successfull!",
+                ];
+                return response()->json($success,200);
+            }
+            
+            
+            
+        
+        }
+    }
+
+    public function statusFilterProjectOrTask($ProjectId, $Task, $StatusId){
+        $data = [
+            'ProjectId' => $ProjectId,
+            'Task' => $Task,
+            'StatusId'=>$StatusId,
+        ];
+    
+        $rules = [
+            'ProjectId' => 'required',
+            'Task' => 'required|boolean',
+            'StatusId'=>'required',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $success=[];
+        if($Task == false){
+            $findProjects= Projects::where(["id"=>$ProjectId, "p_status"=>$StatusId])->get();
+            if(!empty($findProject)){
+                foreach($findProjects as $project){
+                    $findManager = User::where("id", $project->p_manager_id)->first();
+                    $findProjectsStatus = ProjectsStatus::where("id", $StatusId)->first();
+                
+        
+                    $success[] =[
+                        "project_id" => $project->id,
+                        "manager_id"=>$project->p_manager_id,
+                        "manager" => $findManager->name,
+                        "manager_email"=>$findManager->email,
+                        "name"=>$project->p_name,
+                        "status"=>$findProjectsStatus->p_status,
+                        "deadline"=>$project->deadline
+                    ];
+    
+                }
+              
+                return response()->json($success,200);
+            }else{
+                throw new Exception("Project does not exists!");
+            }
+
+        }else{
+           
+            $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "t_status"=>$StatusId])->get();
+            if(!empty($findProjectTasks)){
+                foreach($findProjectTasks as $task){
+                    $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+                    $findStatus = TaskStatus::where("id",$task->t_status)->first();
+
+                    $success[]=[
+                        "task_id"=>$task->id,
+                        "task_name"=>$task->task_name,
+                        "dedadline"=>$task->deadline,
+                        "description"=>$task->description,
+                        "status"=>$findStatus->task_status,
+                        "priority_id"=>$findPriority->id,
+                        "priority"=>$findPriority->task_priority,
+                    ];
+                }
+            }else{
+                throw new Exception("Task does not exists!");
+            }
+            
+
+            if(!empty($success)){
+                return response()->json($success,200);
+            }else{
+                $success[]=[   
+                    "message"=>"You have no tasks in this project!",
+                    "code"=>404,
+                ];
+                return response()->json($success,404);
+            }
+           
+            
+            
+        }
+    }
 
 
 
