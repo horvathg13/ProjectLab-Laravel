@@ -685,6 +685,7 @@ class Api_Controller extends Controller
                 "message"=>$message,
 
             ]);
+
             $create= true;
             if(!$create){
                 $success=[   
@@ -717,7 +718,7 @@ class Api_Controller extends Controller
             if(empty($filteredParticipants)){
                 throw new Exception('No participants in this project');
             }
-            $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] !== $user->id);
+            $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] != $user->id);
             
           
             $OtherUserMessages=[];
@@ -953,7 +954,7 @@ class Api_Controller extends Controller
         $enterTheHook=false;
         foreach($findProjects as $projects){
           
-            $findChatMessageByProjectId = ChatMessages::where("p_id", $projects['p_id'])->where("task_id", null)->get();
+            $findChatMessageByProjectId = ChatMessages::where("p_id", $projects['p_id'])->where("task_id", null)->where("sender_id","!=", $user->id)->get();
             foreach($findChatMessageByProjectId as $findByProjectId){
                 $existsInChatView = ChatView::where("chat_id", $findByProjectId['id'])->exists();
                 if(!$existsInChatView){
@@ -962,6 +963,8 @@ class Api_Controller extends Controller
                         "UnreadProject_Project_id"=>$findByProjectId['p_id'],
                     ];
                 }else{
+                    //ezt az else ágat át kellene gondolni, mert most minden üzenet új id-val szúródik be az
+                    //adatbázisba. Így nem lesz olyan eset, amikor ugyanaz az id mégegyszer szerepelne. 
                     $findOpenedMessage= ChatView::where("chat_id",$findByProjectId['id'])->get();
                
                     
@@ -969,7 +972,7 @@ class Api_Controller extends Controller
                         if($opened['updated_at']<=$findByProjectId['created_at']){
                             $haveUnreadOpenedProjectMessages=true;
                             $Project[]=[
-                                "UnreadOpenedProject_Chat_id"=>$opened['chat_id'],
+                                "UnreadOpenedProject_Project_id"=>$findByProjectId['p_id'],
                             ];
                         }
                     }
@@ -983,15 +986,17 @@ class Api_Controller extends Controller
 
             foreach($assignedTasks as $findByTaskId){
                 
-                $findChatMessageByTaskId=ChatMessages::where("p_id", $projects['p_id'])->where("task_id", $findByTaskId['task_id'])->get();
+                $findChatMessageByTaskId=ChatMessages::where("p_id", $projects['p_id'])->where("task_id", $findByTaskId['task_id'])->where("sender_id","!=", $user->id)->get();
                 foreach($findChatMessageByTaskId as $ChatMessage){
                     $existsInChatView = ChatView::where("chat_id", $ChatMessage['id'])->exists();
                     if(!$existsInChatView){
                         $haveUnreadTaskMessages=true;
                         $Task[]=[
-                            "UnreadTaskMessages_Chat_id"=>$ChatMessage['id']
+                            "UnreadTaskMessages_Task_id"=>$ChatMessage['task_id'],
+                            "UnreadTask_Project_id"=>$ChatMessage['p_id']
                         ];
                     }else{
+                        //szerintem itt is u.a. mint fent...
                         $findOpenedMessage= ChatView::where("chat_id",$ChatMessage['id'])->get();
 
                         $enterTheHook=true;
@@ -999,7 +1004,8 @@ class Api_Controller extends Controller
                             if($findByTaskId['created_at']>$opened['updated_at']){
                                 $haveUnreadOpenedTaskMessages=true;
                                 $Task[]=[
-                                    "UnreadOpenedTask_Chat_id"=>$opened["chat_id"]
+                                    "UnreadOpenedTask_Task_id"=>$ChatMessage['task_id'],
+                                    "UnreadOpenedTask_Project_id"=>$ChatMessage['p_id']
                                 ];
                             }
                         }
