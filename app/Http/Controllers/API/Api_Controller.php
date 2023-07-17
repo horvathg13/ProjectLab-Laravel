@@ -1263,7 +1263,7 @@ class Api_Controller extends Controller
 
         $success=[];
 
-        if(isNull($TaskId)){
+        if(is_null($TaskId)){
             $getProjectsStatus = ProjectsStatus::all();
             $success[]=[
                 "message"=>"That's it!",
@@ -1279,20 +1279,25 @@ class Api_Controller extends Controller
             return response()->json($success,200);
         }
     }
+
     
-    public function setStatus($ProjectId, $TaskId, $StatusId,$SetAll){
+    public function setStatus($ProjectId, $TaskId, $StatusId, $PriorityId, $SetAllTask, $SetAllPriority){
         $data = [
             'ProjectId' => $ProjectId,
             'TaskId' => $TaskId,
             'StatusId'=>$StatusId,
-            'SetAll'=>$SetAll,
+            'PriorityId'=>$PriorityId,
+            'SetAllTask'=>json_decode($SetAllTask,true),
+            'SetAllPriority'=>json_decode($SetAllPriority,true),
         ];
     
         $rules = [
             'ProjectId' => 'required',
             'TaskId' => 'nullable',
             'StatusId'=>'required',
-            'SetAll'=>'required|boolean'
+            'PriorityId'=>'nullable',
+            'SetAllTask'=>'nullable|boolean',
+            'SetAllPriority'=>'nullable|boolean'
         ];
     
         $validator = Validator::make($data, $rules);
@@ -1302,7 +1307,7 @@ class Api_Controller extends Controller
         }
 
         $success=[];
-        if(isNull($TaskId)){
+        if(is_null($TaskId)){
             $findProject= Projects::where("id", $ProjectId)->first();
             if(!empty($findProject)){
                 
@@ -1312,15 +1317,7 @@ class Api_Controller extends Controller
                     "p_status"=>$StatusId
                 ]);
                 
-                if($SetAll == true){
-                    $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                    foreach($findProjectTasks as $task){
-                        $task->touch();
-                        $task->update([
-                            "t_status"=>$StatusId
-                        ]);
-                    }
-                }
+               
                 $success[]=[
                     "message"=>"Update Successfull!",
                 ];
@@ -1328,30 +1325,52 @@ class Api_Controller extends Controller
             }
 
         }else{
-            if($SetAll == false){
-                $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
+            
+            $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
+            if($SetAllTask===false){
                 
                 $findProjectTasks->touch();
                 $findProjectTasks->update([
-                        "t_status"=>$StatusId
+                    "t_status"=>$StatusId,
+                    
                 ]);
                 $success[]=[
                     "message"=>"Update Successfull!",
                 ];
-                return response()->json($success,200);
             }else{
+                var_dump("enter The hook", $SetAllTask);
                 $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
                 foreach($findProjectTasks as $task){
                     $task->touch();
                     $task->update([
-                        "t_status"=>$StatusId
+                        "t_status"=>$StatusId,
+                        
                     ]);
                 }
-                $success[]=[
-                    "message"=>"Update Successfull!",
-                ];
-                return response()->json($success,200);
             }
+            
+            if($SetAllPriority==false && !is_null($PriorityId)){
+                $findProjectTasks->update([
+                    "t_priority"=>$PriorityId
+                ]);
+                var_dump("szióka");
+            }else if(!is_null($PriorityId) && $SetAllPriority==true){
+                $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
+                foreach($findProjectTasks as $task){
+                    $task->touch();
+                    $task->update([
+                        "t_priority"=>$PriorityId
+                    ]);
+                }
+            }
+            
+
+           
+            $success[]=[
+                "message"=>"Update Successfull!",
+            ];
+            return response()->json($success,200);
+            
             
             
             
