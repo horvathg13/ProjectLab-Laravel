@@ -1251,7 +1251,7 @@ class Api_Controller extends Controller
         ];
     
         $rules = [
-            'ProjectId' => 'required',
+            'ProjectId' => 'nullable',
             'TaskId' => 'nullable',
         ];
     
@@ -1385,7 +1385,7 @@ class Api_Controller extends Controller
         }
     }
 
-    public function statusFilterProjectOrTask($ProjectId, $Task, $StatusId){
+    public function statusFilterProjectOrTask($ProjectId,$Task, $StatusId){
         $data = [
             'ProjectId' => $ProjectId,
             'Task' => $Task,
@@ -1393,8 +1393,8 @@ class Api_Controller extends Controller
         ];
     
         $rules = [
-            'ProjectId' => 'required',
-            'Task' => 'required|boolean',
+            'ProjectId' => 'nullable',
+            'Task' => 'nullable',
             'StatusId'=>'required',
         ];
     
@@ -1403,11 +1403,12 @@ class Api_Controller extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-
+       
+        
         $success=[];
-        if($Task == false){
-            $findProjects= Projects::where(["id"=>$ProjectId, "p_status"=>$StatusId])->get();
-            if(!empty($findProject)){
+        if($Task == 'null' && $ProjectId == 'null'){
+            $findProjects= Projects::where("p_status",$StatusId)->get();
+            if($findProjects->isNotEmpty()){
                 foreach($findProjects as $project){
                     $findManager = User::where("id", $project->p_manager_id)->first();
                     $findProjectsStatus = ProjectsStatus::where("id", $StatusId)->first();
@@ -1427,13 +1428,14 @@ class Api_Controller extends Controller
               
                 return response()->json($success,200);
             }else{
+                
                 throw new Exception("Project does not exists!");
             }
 
         }else{
            
             $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "t_status"=>$StatusId])->get();
-            if(!empty($findProjectTasks)){
+            if($findProjectTasks->isNotEmpty()){
                 foreach($findProjectTasks as $task){
                     $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
                     $findStatus = TaskStatus::where("id",$task->t_status)->first();
