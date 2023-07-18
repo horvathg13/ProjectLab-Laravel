@@ -30,7 +30,7 @@ use Illuminate\Validation\ValidationException;
 use ProjectsTable;
 use Symfony\Component\VarDumper\VarDumper;
 use Tymon\JWTAuth\Facades\JWTAuth;
-
+use Illuminate\Validation\Rule;
 use function PHPUnit\Framework\isEmpty;
 use function PHPUnit\Framework\isNull;
 use function PHPUnit\Framework\throwException;
@@ -1288,23 +1288,27 @@ class Api_Controller extends Controller
             'StatusId'=>$StatusId,
             'PriorityId'=>$PriorityId,
             'SetAllTask'=>json_decode($SetAllTask,true),
-            'SetAllPriority'=>json_decode($SetAllPriority,true),
+            'SetAllPriority'=>json_decode($SetAllPriority),
         ];
     
         $rules = [
             'ProjectId' => 'required',
             'TaskId' => 'nullable',
-            'StatusId'=>'required',
+            'StatusId' => 'required',
             'PriorityId'=>'nullable',
             'SetAllTask'=>'nullable|boolean',
             'SetAllPriority'=>'nullable|boolean'
         ];
     
         $validator = Validator::make($data, $rules);
-    
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
+        if($StatusId == 'undefined'){
+            throw new Exception("Status set is reqired!");
+        }
+        $SetAllTaskBool = filter_var($SetAllTask,FILTER_VALIDATE_BOOLEAN);
+        $SetAllPriorityBool = filter_var($SetAllPriority,FILTER_VALIDATE_BOOLEAN);
 
         $success=[];
         if(is_null($TaskId)){
@@ -1327,7 +1331,7 @@ class Api_Controller extends Controller
         }else{
             
             $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
-            if($SetAllTask===false){
+            if($SetAllTaskBool===false){
                 
                 $findProjectTasks->touch();
                 $findProjectTasks->update([
@@ -1338,7 +1342,7 @@ class Api_Controller extends Controller
                     "message"=>"Update Successfull!",
                 ];
             }else{
-                var_dump("enter The hook", $SetAllTask);
+                var_dump("enter The hook", is_bool($SetAllTaskBool));
                 $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
                 foreach($findProjectTasks as $task){
                     $task->touch();
@@ -1349,12 +1353,12 @@ class Api_Controller extends Controller
                 }
             }
             
-            if($SetAllPriority==false && !is_null($PriorityId)){
+            if($SetAllPriorityBool===false && isset($PriorityId)){
                 $findProjectTasks->update([
                     "t_priority"=>$PriorityId
                 ]);
                 var_dump("szióka");
-            }else if(!is_null($PriorityId) && $SetAllPriority==true){
+            }else if(isset($PriorityId) && $SetAllPriorityBool===true){
                 $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
                 foreach($findProjectTasks as $task){
                     $task->touch();
@@ -1363,7 +1367,7 @@ class Api_Controller extends Controller
                     ]);
                 }
             }
-            
+            var_dump(is_int($PriorityId),"miamanó");
 
            
             $success[]=[

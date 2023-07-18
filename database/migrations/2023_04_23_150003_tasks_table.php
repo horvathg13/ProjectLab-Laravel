@@ -22,7 +22,7 @@ class TasksTable extends Migration
             $table->foreign("p_id")->references("id")->on("projects");
             $table->unsignedBigInteger("t_status");
             $table->foreign("t_status")->references("id")->on("task_status");
-            $table->unsignedBigInteger("t_priority");
+            $table->unsignedBigInteger("t_priority")->nullable();
             $table->foreign("t_priority")->references("id")->on("task_priorities");
             $table->timestamps();
         });

@@ -17,7 +17,7 @@ class Tasks extends Model
         "description",
         "p_id",
         "t_status",
-        "t_priority"
+        
     ];
 
     public function projectTasks(){
