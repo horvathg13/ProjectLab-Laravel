@@ -1260,10 +1260,10 @@ class Api_Controller extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-
+        
         $success=[];
 
-        if(is_null($TaskId)){
+        if($TaskId=='null'){
             $getProjectsStatus = ProjectsStatus::all();
             $success[]=[
                 "message"=>"That's it!",
@@ -1287,7 +1287,7 @@ class Api_Controller extends Controller
             'TaskId' => $TaskId,
             'StatusId'=>$StatusId,
             'PriorityId'=>$PriorityId,
-            'SetAllTask'=>json_decode($SetAllTask,true),
+            'SetAllTask'=>json_decode($SetAllTask),
             'SetAllPriority'=>json_decode($SetAllPriority),
         ];
     
@@ -1309,9 +1309,8 @@ class Api_Controller extends Controller
         }
         $SetAllTaskBool = filter_var($SetAllTask,FILTER_VALIDATE_BOOLEAN);
         $SetAllPriorityBool = filter_var($SetAllPriority,FILTER_VALIDATE_BOOLEAN);
-
         $success=[];
-        if(is_null($TaskId)){
+        if($TaskId == 'null'){
             $findProject= Projects::where("id", $ProjectId)->first();
             if(!empty($findProject)){
                 
@@ -1342,32 +1341,36 @@ class Api_Controller extends Controller
                     "message"=>"Update Successfull!",
                 ];
             }else{
-                var_dump("enter The hook", is_bool($SetAllTaskBool));
+                
                 $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                foreach($findProjectTasks as $task){
-                    $task->touch();
-                    $task->update([
-                        "t_status"=>$StatusId,
-                        
-                    ]);
+                if(empty($findProjectTasks)){
+                    throw new Exception("Query is empty");
+                }else{
+                    foreach($findProjectTasks as $task){
+                        $task->touch();
+                        $task->t_status = $StatusId;
+                        $task->save();
+                    }
                 }
+                
             }
             
-            if($SetAllPriorityBool===false && isset($PriorityId)){
-                $findProjectTasks->update([
-                    "t_priority"=>$PriorityId
-                ]);
-                var_dump("szióka");
-            }else if(isset($PriorityId) && $SetAllPriorityBool===true){
+            if($PriorityId !== null && $SetAllPriorityBool===true){
                 $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                foreach($findProjectTasks as $task){
-                    $task->touch();
-                    $task->update([
-                        "t_priority"=>$PriorityId
-                    ]);
-                }
+                if(empty($findProjectTasks)){
+                    throw new Exception("Query is empty");
+                }else{
+                    foreach($findProjectTasks as $task){
+                        $task->touch();
+                        $task->update([
+                            "t_priority"=>$PriorityId
+                        ]);
+                    }
+                    
+                } 
+                return response()->json($findProjectTasks,200);
             }
-            var_dump(is_int($PriorityId),"miamanó");
+           
 
            
             $success[]=[
