@@ -547,10 +547,9 @@ class Api_Controller extends Controller
 
     public function createParticipants(Request $request){
 
-        
         $validator = Validator::make($request->all(),[
-            "datas" => "required",
-           
+            "participants" => "required",
+            "project" => "required"
         ]);
 
         if ($validator->fails()){
@@ -560,37 +559,31 @@ class Api_Controller extends Controller
             ];
             return response()->json($response, 400);
         }
+        $participants = $validator->validated()['participants'];
+        $project = $validator->validated()['project'];
+        foreach($participants as $parti){
+            $findParticipants= ProjectParticipants::where(["user_id"=>$parti['id'], "p_id"=>$project['project_id']])->exists();
+            if($findParticipants == true){
+                throw new Exception("Participants already attached!");
+            }else{
+                $find_status_id = ProjectsStatus::where("p_status", $project["status"])->first();
+                ProjectParticipants::create([
+                    "user_id"=>$parti['id'],
+                    "p_id"=>$project['project_id'],
+                    'p_status'=>$find_status_id->id
 
-        $projectDatas = json_decode($validator->validated()['datas'], true);
-        $create = false;
-
-        
-        foreach($projectDatas as $d){
-            $find_status_id = ProjectsStatus::where("p_status", $d["status"])->first();
-            $create = ProjectParticipants::create([
-                "user_id" => $d["id"],
-                "p_id"=>$d["project_id"],
-                "p_status"=> $find_status_id->id
-                
-            ]);
+                ]);
+            }
+            
         };
-        
-        $create= true;
-        if(!$create){
-            $success=[   
-                "message"=>"Fail under create participants",
-                "code"=>500,
-            ];
-            return response()->json($success);
-        }else{
-            $success=[   
-                "message"=>"Thats it! Participants created Successfull",
-                "code"=>200,
-                
-            ];
+        $success=[
+            "message"=>"Thats it! Participants created Successfull",
+            "code"=>200,
+            
+        ];
 
-            return response()->json($success);
-        }
+        return response()->json($success,200);
+       
     }
 
     public function getActiveEmployees($task_id){
@@ -720,7 +713,7 @@ class Api_Controller extends Controller
             if(empty($filteredParticipants)){
                 throw new Exception('No participants in this project');
             }
-            $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] != $user->id);
+            $filteredParticipants = array_filter($filteredParticipants, fn($participant) =>  $participant['id'] != $user->id);
             
           
             $OtherUserMessages=[];
@@ -1470,6 +1463,51 @@ class Api_Controller extends Controller
         }
     }
 
+    public function Notifications(){
+        $user= JWTAuth::parseToken()->authenticate();
+        $success = [];
+        $findUserasProjectManager= Projects::where("p_manager_id",$user->id)->get();
+
+        if($findUserasProjectManager->isNotEmpty()){
+            foreach($findUserasProjectManager as $manager){
+                $computedDays = now()->diffInDays($manager->deadline);
+                if($computedDays <= 5){
+                    $success[]=[
+                        "Managed_Project"=>$findUserasProjectManager,
+                        "days"=>$computedDays
+                    ];
+                }
+            }
+            
+           
+        }else{
+            $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
+            foreach($findUserasParticipant as $parti){
+                $findAssignedTask=AssignedTask::where("p_participant_id", $parti['id'])->get();
+                foreach($findAssignedTask as $task){
+                    $findTask=Tasks::where("id",$task['task_id'])->get();
+                    if( $findTask->isNotEmpty()){
+                        foreach($findTask as $t){
+                            $computedDays = now()->diffInDays($t['deadline']);
+                            if($computedDays <= 5){
+                                $success[]=[
+                                    "Task"=>$t,
+                                    "days"=>$computedDays
+                                ];
+                            }
+                        }
+                        
+                    }
+
+                }
+                
+            }
+            
+        }
+
+        return response()->json($success, 200);
+        
+    }
 
 
 

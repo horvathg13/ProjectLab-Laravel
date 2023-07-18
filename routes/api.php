@@ -52,3 +52,4 @@ Route::post("get-users-buttons",[App\Http\Controllers\API\Api_Controller::class,
 Route::post("get-status/{ProjectId}/{TaskId}",[App\Http\Controllers\API\Api_Controller::class, "getStatus"]);
 Route::post("set-status/{ProjectId}/{TaskId}/{StatusId}/{PriorityId}/{SetAllTask}/{SetAllPriority}",[App\Http\Controllers\API\Api_Controller::class, "setStatus"]);
 Route::post("filter-status/{ProjectId}/{Task}/{StatusId}",[App\Http\Controllers\API\Api_Controller::class, "statusFilterProjectOrTask"]);
+Route::post("notification",[App\Http\Controllers\API\Api_Controller::class, "Notifications"]);
