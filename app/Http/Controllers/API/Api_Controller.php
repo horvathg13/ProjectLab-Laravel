@@ -651,31 +651,21 @@ class Api_Controller extends Controller
         
        
     }
-    public function SendMessage($emitData, $projectId){
-        $emit = json_decode($emitData);
-       
-        $message = $emit->message;
-        $data = $emit->data;
-        $participants = $emit->participants;
+    public function SendMessage(Request $request){
+
+        $participants = $request->input('participants');
+        $message= $request->input('message');
+        $data = $request->input('data');
+        $projectId =$request->input('projectId');
+        
+        
 
         if($participants != null && $message != null && $data != null){
             $user = JWTAuth::parseToken()->authenticate();
 
-           
-        
-            /*foreach($participants as $p){
-                $create = ChatMessages::create([
-                    "p_id"=> $projectId,
-                    "task_id"=>$data->id,
-                    "sender_id"=>$user->id,
-                    "receiver_id"=>$p->id,
-                    "message"=>$message,
-
-                ]);
-            }*/
             $create = ChatMessages::create([
                 "p_id"=> $projectId,
-                "task_id"=>$data->id,
+                "task_id"=>$data['id'],
                 "sender_id"=>$user->id,
                 "message"=>$message,
 
@@ -713,8 +703,11 @@ class Api_Controller extends Controller
             if(empty($filteredParticipants)){
                 throw new Exception('No participants in this project');
             }
-            $filteredParticipants = array_filter($filteredParticipants, fn($participant) =>  $participant['id'] != $user->id);
+            $filteredParticipants = array_filter($filteredParticipants, function($participant) use ($user) {
+                return $participant['id'] !== $user->id;
+            });
             
+           
           
             $OtherUserMessages=[];
             foreach($filteredParticipants as $fp){
@@ -828,8 +821,9 @@ class Api_Controller extends Controller
                     "message"=>"No participants in this task!"
                 ],500);*/
             }            
-            $filteredParticipants = array_filter($filteredParticipants, fn($participant) => $participant['id'] !== $user->id);
-            
+            $filteredParticipants = array_filter($filteredParticipants, function($participant) use ($user) {
+                return $participant['id'] !== $user->id;
+            });            
           
             $OtherUserMessages=[];
             foreach($filteredParticipants as $fp){
@@ -1274,14 +1268,22 @@ class Api_Controller extends Controller
     }
 
     
-    public function setStatus($ProjectId, $TaskId, $StatusId, $PriorityId, $SetAllTask, $SetAllPriority){
+    public function setStatus(Request $request){
+
+        $ProjectId=$request->input('projectId');
+        $TaskId=$request->input('taskId');
+        $StatusId=$request->input('StatusId');
+        $PriorityId=$request->input('priorityId');
+        $SetAllTask=$request->input('setAllTask');
+        $SetAllPriority=$request->input('setAllPriority');
+
         $data = [
             'ProjectId' => $ProjectId,
-            'TaskId' => $TaskId,
+            'TaskId' =>  $TaskId,
             'StatusId'=>$StatusId,
             'PriorityId'=>$PriorityId,
-            'SetAllTask'=>json_decode($SetAllTask),
-            'SetAllPriority'=>json_decode($SetAllPriority),
+            'SetAllTask'=> $SetAllTask,
+            'SetAllPriority'=> $SetAllPriority,
         ];
     
         $rules = [
@@ -1300,10 +1302,12 @@ class Api_Controller extends Controller
         if($StatusId == 'undefined'){
             throw new Exception("Status set is reqired!");
         }
+
         $SetAllTaskBool = filter_var($SetAllTask,FILTER_VALIDATE_BOOLEAN);
         $SetAllPriorityBool = filter_var($SetAllPriority,FILTER_VALIDATE_BOOLEAN);
         $success=[];
-        if($TaskId == 'null'){
+
+        if($TaskId == null){
             $findProject= Projects::where("id", $ProjectId)->first();
             if(!empty($findProject)){
                 

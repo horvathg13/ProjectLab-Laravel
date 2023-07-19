@@ -44,12 +44,12 @@ Route::post("assign-employee-to-task",[App\Http\Controllers\API\Api_Controller::
 Route::post("projects/{project_id}/tasks/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "AttachMyself"]);
 Route::post("getActiveEmployees/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "getActiveEmployees"]);
 Route::post("detach/{projectId}/{taskId}/{userId}",[App\Http\Controllers\API\Api_Controller::class, "detachUser"]);
-Route::post("send-message/{emitData}/{projectId}",[App\Http\Controllers\API\Api_Controller::class, "sendMessage"]);
+Route::post("send-message",[App\Http\Controllers\API\Api_Controller::class, "sendMessage"]);
 Route::post("get-messages/project-id/{projectId}/task-id/{taskId}/participants/{participants}",[App\Http\Controllers\API\Api_Controller::class, "getMessages"]);
 Route::post("get-unread-messages",[App\Http\Controllers\API\Api_Controller::class, "getUnreadMessages"]);
 Route::post("get-buttons/{projecId}",[App\Http\Controllers\API\Api_Controller::class, "getProjectandTaskButtons"]);
 Route::post("get-users-buttons",[App\Http\Controllers\API\Api_Controller::class, "getUsersButton"]);
 Route::post("get-status/{ProjectId}/{TaskId}",[App\Http\Controllers\API\Api_Controller::class, "getStatus"]);
-Route::post("set-status/{ProjectId}/{TaskId}/{StatusId}/{PriorityId}/{SetAllTask}/{SetAllPriority}",[App\Http\Controllers\API\Api_Controller::class, "setStatus"]);
+Route::post("set-status",[App\Http\Controllers\API\Api_Controller::class, "setStatus"]);
 Route::post("filter-status/{ProjectId}/{Task}/{StatusId}",[App\Http\Controllers\API\Api_Controller::class, "statusFilterProjectOrTask"]);
 Route::post("notification",[App\Http\Controllers\API\Api_Controller::class, "Notifications"]);
