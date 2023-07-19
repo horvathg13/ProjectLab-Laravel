@@ -246,11 +246,11 @@ class Api_Controller extends Controller
     }
 
     public function getProjects(){
-
-        $projects = Projects::all();
+        $today=now();
+        $projects = Projects::where("deadline", ">=", $today)->get();
         $success =[];
   
-
+       
         foreach($projects as $project){
             $findManager = User::where("id", $project->p_manager_id)->first();
             $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
@@ -1474,14 +1474,19 @@ class Api_Controller extends Controller
         
         if($findUserasProjectManager->isNotEmpty()){
             foreach($findUserasProjectManager as $manager){
-                $findProjectStatus=ProjectsStatus::where("id",$manager->p_status)->first();
                 $computedDays = now()->diffInDays($manager->deadline);
                 if($computedDays <= 5){
+                    $findUrgent=ProjectsStatus::where("p_status","Urgent")->first();
+                    $manager->update([
+                      "p_status"=>$findUrgent['id'],
+                    ]);
+                    $manager->save();
+                   
                     $success[]=[
                         "id"=>$manager->id,
                         "type"=>"Project",
                         "title"=>$manager->p_name,
-                        "status"=>$findProjectStatus['p_status'],
+                        "status"=>$findUrgent['p_status'],
                         "deadline"=>$manager->deadline,
                         "days"=>$computedDays,
                         
@@ -1587,7 +1592,40 @@ class Api_Controller extends Controller
         return response()->json($success,200);
     }
 
+    public function MyTasks(){
+        $user= JWTAuth::parseToken()->authenticate();
+        $success=[];
+        $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
 
+        foreach($findUserasParticipant as $parti){
+            $findAssignedTask=AssignedTask::where("p_participant_id", $parti->id)->get();
+            foreach($findAssignedTask as $assigned){
+                $findTask = Tasks::where("id",$assigned->task_id)->get();
+                foreach($findTask as $task){
+                    $findStatus = TaskStatus::where("id", $task->t_status)->first();
+                    $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+                    $findProjectname = Projects::where("id", $task->p_id)->first();
+
+                    $success[]=[
+                        "id"=>$task->id,
+                        "name"=>$task->task_name,
+                        "deadline"=>$task->deadline,
+                        "description"=>$task->description,
+                        "projectName"=>$findProjectname['p_name'],
+                        "projectId"=>$findProjectname['id'],
+                        "status"=>$findStatus->task_status,
+                        "priority"=>$findPriority->task_priority,
+                        
+                    ];
+                }
+            }
+           
+        }
+        if(empty($success)){
+            throw new Exception("You have no tasks!");
+        }
+        return response()->json($success,200);
+    }
     
 
         
