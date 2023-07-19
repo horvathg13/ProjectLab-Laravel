@@ -1471,48 +1471,120 @@ class Api_Controller extends Controller
         $user= JWTAuth::parseToken()->authenticate();
         $success = [];
         $findUserasProjectManager= Projects::where("p_manager_id",$user->id)->get();
-
+        
         if($findUserasProjectManager->isNotEmpty()){
             foreach($findUserasProjectManager as $manager){
+                $findProjectStatus=ProjectsStatus::where("id",$manager->p_status)->first();
                 $computedDays = now()->diffInDays($manager->deadline);
                 if($computedDays <= 5){
                     $success[]=[
-                        "Managed_Project"=>$findUserasProjectManager,
-                        "days"=>$computedDays
+                        "id"=>$manager->id,
+                        "type"=>"Project",
+                        "title"=>$manager->p_name,
+                        "status"=>$findProjectStatus['p_status'],
+                        "deadline"=>$manager->deadline,
+                        "days"=>$computedDays,
+                        
                     ];
                 }
             }
             
            
-        }else{
-            $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
-            foreach($findUserasParticipant as $parti){
-                $findAssignedTask=AssignedTask::where("p_participant_id", $parti['id'])->get();
-                foreach($findAssignedTask as $task){
-                    $findTask=Tasks::where("id",$task['task_id'])->get();
-                    if( $findTask->isNotEmpty()){
-                        foreach($findTask as $t){
-                            $computedDays = now()->diffInDays($t['deadline']);
-                            if($computedDays <= 5){
-                                $success[]=[
-                                    "Task"=>$t,
-                                    "days"=>$computedDays
-                                ];
-                            }
-                        }
-                        
-                    }
+        }
+        
+        $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
+        foreach($findUserasParticipant as $parti){
+            $findAssignedTask=AssignedTask::where("p_participant_id", $parti['id'])->get();
+            foreach($findAssignedTask as $task){
+                $findTask=Tasks::where("id",$task['task_id'])->get();
+                if( $findTask->isNotEmpty()){
+                    foreach($findTask as $t){
+                        $computedDays = now()->diffInDays($t['deadline']);
+                        $findTaskStatus=TaskStatus::where("id", $t->t_status)->first();
 
+                        if($computedDays <= 5){
+                            $success[]=[
+                                "id"=>$t->id,
+                                "type"=>"Task",
+                                "title"=>$t->task_name,
+                                "status"=>$findTaskStatus['task_status'],
+                                "deadline"=>$t->deadline,
+                                "days"=>$computedDays
+                            ];
+                        }
+                    }
+                    
                 }
-                
+
             }
             
         }
+            
+        
 
         return response()->json($success, 200);
         
     }
 
+    public function Completed(Request $request){
+        $user= JWTAuth::parseToken()->authenticate();
+        $ProjectId = $request->input('projectId');
+        $TaskData = $request->input('taskData');
+
+        $data = [
+            'ProjectId' => $ProjectId,
+            'taskData' => $TaskData,
+        ];
+    
+        $rules = [
+            'ProjectId' => 'nullable',
+            'taskData'=>'required',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+        
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $success=[];
+
+        $findUserasParticipant=ProjectParticipants::where(["user_id"=> $user->id, "p_id"=>$ProjectId])->first();
+        if(empty($findUserasParticipant)){
+            throw new Exception("Denied!");
+        }else{
+                $findAssignedTask=AssignedTask::where("p_participant_id", $findUserasParticipant->id)->first();
+                if(empty($findAssignedTask)){
+                    throw new Exception("Denied!");
+                }else{
+                    
+                    $findTask=Tasks::where("id", $TaskData['task_id'])->first();
+                    $findStatus = TaskStatus::where("task_status", $TaskData['status'])->first();
+                    if(!empty($findTask)){
+                        
+                        $findTask->update([
+                            "t_status"=>$findStatus->id
+                        ]);
+                        $findTask->save();
+                        
+                    }else{
+                        throw new Exception("Task does not exist!");
+                    }
+
+                    
+                }
+                    
+            
+            
+        }
+
+        $success[]=[
+            "message"=>"Nice job!"
+        ];
+
+        return response()->json($success,200);
+    }
 
 
     
