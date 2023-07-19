@@ -1554,9 +1554,10 @@ class Api_Controller extends Controller
         if(empty($findUserasParticipant)){
             throw new Exception("Denied!");
         }else{
-                $findAssignedTask=AssignedTask::where("p_participant_id", $findUserasParticipant->id)->first();
+                $findAssignedTask=AssignedTask::where(["p_participant_id" => $findUserasParticipant->id, "task_id"=>$TaskData['task_id']])->first();
                 if(empty($findAssignedTask)){
                     throw new Exception("Denied!");
+                    
                 }else{
                     
                     $findTask=Tasks::where("id", $TaskData['task_id'])->first();
