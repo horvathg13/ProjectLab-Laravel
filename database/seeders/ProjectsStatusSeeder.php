@@ -14,9 +14,7 @@ class ProjectsStatusSeeder extends Seeder
      */
     public function run()
     {
-        ProjectsStatus::create([
-            "p_status" => "Urgent",
-        ]);
+       
         ProjectsStatus::create([
             "p_status" => "Suspended",
         ]);

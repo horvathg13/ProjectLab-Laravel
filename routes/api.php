@@ -55,3 +55,4 @@ Route::post("filter-status/{ProjectId}/{Task}/{StatusId}",[App\Http\Controllers\
 Route::post("notifications",[App\Http\Controllers\API\Api_Controller::class, "Notifications"]);
 Route::post("completed",[App\Http\Controllers\API\Api_Controller::class, "Completed"]);
 Route::post("get-my-tasks",[App\Http\Controllers\API\Api_Controller::class, "MyTasks"]);
+Route::post("getUserRole",[App\Http\Controllers\API\Api_Controller::class, "getUserRole"]);

@@ -196,20 +196,26 @@ class Api_Controller extends Controller
             if($findProject != null){
                 $status = ProjectsStatus::where("p_status", "Active")->first();
                 $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
-
-                $update= $findProject->update([
+                $findManagerRoleId = Roles::where("role_name", "Manager")->first();
+                $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$validator->validated()['p_manager_id']])->exists();
+                if($findManagerGlobalRole==true){
+                     $update= $findProject->update([
                     "p_name" => $validator->validated()['p_name'],
                     "p_manager_id" => $validator->validated()['p_manager_id'],
                     "deadline" => $formattedDate,
                     "p_status" => $status->id
 
-                ]);
-                $success=[
-                    "message"=>"Update Successfull",
-                    "data"=>$update,
-                ];
+                    ]);
+                    $success=[
+                        "message"=>"Update Successfull",
+                        "data"=>$update,
+                    ];
 
-                 return response()->json($success);
+                    return response()->json($success);
+                }else{
+                    throw new Exception("User has no manager role in the system!");
+                }
+               
             }   
         }else{
             $status = ProjectsStatus::where("p_status", "Active")->first();
@@ -246,8 +252,9 @@ class Api_Controller extends Controller
     }
 
     public function getProjects(){
-        $today=now();
-        $projects = Projects::where("deadline", ">=", $today)->get();
+        /*$today=now();
+        $projects = Projects::where("deadline", ">=", $today)->get();*/
+        $projects = Projects::all();
         $success =[];
   
        
@@ -338,7 +345,7 @@ class Api_Controller extends Controller
                 "message"=> "Name is not unique"
             ];
             return response()->json($fail,500);*/
-
+        $findTaskStatus=TaskStatus::where('task_status', "Active")->first();
         if($validator->validated()['task_id'] != 0){
             $findTask = Tasks::where(["id"=>$validator->validated()['task_id'], "p_id"=>$validator->validated()['project_id']])->first();
             if($findTask != null){
@@ -347,7 +354,7 @@ class Api_Controller extends Controller
                     "deadline"=>$validator->validated()['deadline'],
                     "description"=>$validator->validated()['description'],
                     "p_id"=>$validator->validated()['project_id'],
-                    "t_status"=>3,
+                    "t_status"=>$findTaskStatus['id'],
                     "t_priority"=>$validator->validated()['task_priority'],
 
                 ]);
@@ -359,12 +366,12 @@ class Api_Controller extends Controller
                 return response()->json($success);
             }    
         }else{
-            $create= Tasks::create([
+            $create= TaskStatus::create([
                 "task_name"=>$validator->validated()['task_name'],
                 "deadline"=>$validator->validated()['deadline'],
                 "description"=>$validator->validated()['description'],
                 "p_id"=>$validator->validated()['project_id'],
-                "t_status"=>3,
+                "t_status"=>$findTaskStatus['id'],
                 "t_priority"=>$validator->validated()['task_priority'],
 
             ]);
@@ -395,25 +402,25 @@ class Api_Controller extends Controller
 
     public function getProjectById($id){
 
-        $projects = Projects::where("id", $id)->get();
+        $projects = Projects::where("id", $id)->first();
         $success =[];
   
 
-        foreach($projects as $project){
-            $findManager = User::where("id", $project->p_manager_id)->first();
-            $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
+       
+            $findManager = User::where("id", $projects['p_manager_id'])->first();
+            $findStatus = ProjectsStatus::where("id", $projects['p_status'])->first();
         
 
-            $success[] =[
-                "project_id" => $project->id,
-                "manager" => $findManager->name,
-                "name"=>$project->p_name,
-                "status"=>$findStatus->p_status,
-                "deadline"=>$project->deadline
+            $success =[
+                "project_id" => $projects['id'],
+                "manager" => $findManager['name'],
+                "name"=>$projects['p_name'],
+                "status"=>$findStatus['p_status'],
+                "deadline"=>$projects['deadline']
             ];
 
            
-        }
+        
 
         if(!empty($success)){
             return response()->json($success,200);
@@ -430,6 +437,9 @@ class Api_Controller extends Controller
     
 
     public function getTasks($id){
+        $user=JWTAuth::parseToken()->authenticate();
+        $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();;
+        
         $tasks= Tasks::where("p_id", $id)->get();
         $success=[];
 
@@ -445,6 +455,7 @@ class Api_Controller extends Controller
                 "status"=>$findStatus->task_status,
                 "priority_id"=>$findPriority->id,
                 "priority"=>$findPriority->task_priority,
+                "haveManagerRole"=>$haveManagerRole,
             ];
         }
 
@@ -1470,17 +1481,19 @@ class Api_Controller extends Controller
     public function Notifications(){
         $user= JWTAuth::parseToken()->authenticate();
         $success = [];
-        $findUserasProjectManager= Projects::where("p_manager_id",$user->id)->get();
+        $urgentDay = date("Y-m-d", strtotime("+5 days"));
+        $findUrgent=ProjectsStatus::where("p_status","Active")->first();
+        $findUserasProjectManager= Projects::where(["p_manager_id" =>$user->id, "p_status"=>$findUrgent['id'] ])->where("deadline", "<=", $urgentDay)->get();
         
         if($findUserasProjectManager->isNotEmpty()){
             foreach($findUserasProjectManager as $manager){
-                $computedDays = now()->diffInDays($manager->deadline);
-                if($computedDays <= 5){
-                    $findUrgent=ProjectsStatus::where("p_status","Urgent")->first();
-                    $manager->update([
+                //$computedDays = now()->diffInDays($manager->deadline);
+                //if($computedDays <= 5){
+                    $findUrgent=ProjectsStatus::where("id",$manager->p_status)->first();
+                    /*$manager->update([
                       "p_status"=>$findUrgent['id'],
                     ]);
-                    $manager->save();
+                    $manager->save();*/
                    
                     $success[]=[
                         "id"=>$manager->id,
@@ -1488,10 +1501,25 @@ class Api_Controller extends Controller
                         "title"=>$manager->p_name,
                         "status"=>$findUrgent['p_status'],
                         "deadline"=>$manager->deadline,
-                        "days"=>$computedDays,
+                        //"days"=>$computedDays,
                         
                     ];
-                }
+                //}
+              
+                
+                
+                /*$findCompleted=ProjectsStatus::where(["p_status","Completed"])->first();
+                if($computed->days <= 0 && $manager->p_status !== $findCompleted['id']){
+                    $success[]=[
+                        "id"=>$manager->id,
+                        "type"=>"Project",
+                        "title"=>$manager->p_name,
+                        "status"=>$findCompleted['p_status'],
+                        "deadline"=>$manager->deadline,
+                        "days"=>$computed->days,
+                        
+                    ];
+                }*/
             }
             
            
@@ -1627,7 +1655,31 @@ class Api_Controller extends Controller
         return response()->json($success,200);
     }
     
+    public function getUserRole(){
+        $user= JWTAuth::parseToken()->authenticate();
+        
+        $success=[];
+            
+        
+        $roles = $user->roles()->get();
+        foreach($roles as $r){
+            $success[]=["role"=>$r->role_name];
+        }
+        
+        
+        
 
+        if(!empty($success)){
+            return response()->json($success,200);
+        }else{
+            $success=[   
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($success);
+        }
+    }
+    
         
     
 }
