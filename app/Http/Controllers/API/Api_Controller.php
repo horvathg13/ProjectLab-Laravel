@@ -501,25 +501,60 @@ class Api_Controller extends Controller
        
     }
     public function AssignEmpoyleeToTask(Request $request){
-        $data = $request->json()->all();
-        
-
-        foreach($data as $d){
-            AssignedTask::create([
-                "task_id"=>$d['task_id'],
-                "p_participant_id"=>$d['id']
-            ]);
-          
-        }
+       
+        $data=$request->input('requestData');
+        $remove = $request->input('removeData');
+        $task_id = $request->input('task_id');
+        $project_id = $request->input('project_id');
+       
+        if(!empty($data)){
+            foreach($data as $d){
+                $findAssignedUser = AssignedTask::where(["task_id"=>$d['task_id'], "p_participant_id"=>$d['id']])->exists();
+                if($findAssignedUser==true){
+                    throw new Exception("User already assigned to this task");
+                }else{
+                    AssignedTask::create([
+                        "task_id"=>$d['task_id'],
+                        "p_participant_id"=>$d['id']
+                    ]);
+                }
+            }
  
 
-        $success=[   
-            "message"=>"Task attach was successfull!",
-            "code"=>200,
-            
-        ];
+            $success=[   
+                "message"=>"Task attach was successfull!",
+                "code"=>200,
+                
+            ];
 
-        return response()->json($success, 200);
+            return response()->json($success, 200);
+        }
+        if(!empty($remove)){
+            foreach($remove as $r){
+                $findParticipantId = ProjectParticipants::where(["user_id"=>$r['id'],"p_id"=> $project_id])->first();
+
+                if(empty($findParticipantId)){
+                    throw new Exception("Datasbase error: User does not found!");
+                   
+                }else{
+                    $findAssignedTask = AssignedTask::where([
+                        "task_id"=>$task_id,
+                        "p_participant_id"=>$findParticipantId['id']
+                    ])->first();
+
+                    if(!empty($findAssignedTask)){
+                        $findAssignedTask->delete();
+                        $success=[
+                            "message" => "User detached from this task!"
+                        ];
+                        return response()->json($success,200);
+                    }else{
+                        throw new Exception( "Datasbase error occured!");
+                    }
+                }    
+            }   
+        }           
+                    
     }
 
     public function AttachMyself($project_id, $task_id){
@@ -628,40 +663,7 @@ class Api_Controller extends Controller
         
     }
 
-    public function detachUser($projectId, $taskId, $userId){
-        $participant = ProjectParticipants::where(["user_id"=>$userId,
-                                                    "p_id"=> $projectId])->first();
 
-        if($participant === null){
-            $return=[
-                "message" => "Datasbase error: User does not found."
-            ];
-            return response()->json($return);
-        }else{
-            $findAssignedTask = AssignedTask::where([
-                "task_id"=>$taskId,
-                "p_participant_id"=>$participant->id
-            ])->first();
-
-            if($findAssignedTask !== null){
-                $findAssignedTask->delete();
-                $success=[
-                "message" => "User detach from this task"
-                ];
-                return response()->json($success,200);
-            }else{
-                $success=[
-                "message" => "Datasbase error: Task or user does not found."
-                ];
-                return response()->json($success);
-            }
-        }
-
-        
-
-        
-       
-    }
     public function SendMessage(Request $request){
 
         $participants = $request->input('participants');
