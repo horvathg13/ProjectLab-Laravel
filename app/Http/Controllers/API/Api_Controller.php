@@ -322,7 +322,7 @@ class Api_Controller extends Controller
         $validator = Validator::make($request->all(),[
             "task_name" => "required",
             "description" => "required",
-            "deadline"=> "required|date_format:Y.m.d|after_or_equal:today",
+            "deadline"=> "required|date_format:Y-m-d|after_or_equal:today",
             "project_id"=> "required",
             "task_priority"=>"required",
             "task_id"=>"nullable"
@@ -358,6 +358,7 @@ class Api_Controller extends Controller
                     "t_priority"=>$validator->validated()['task_priority'],
 
                 ]);
+                $findTask->save();
                 $success=[
                     "message"=>"Update Successfull",
                     "data"=>$update,
@@ -521,13 +522,9 @@ class Api_Controller extends Controller
             }
  
 
-            $success=[   
-                "message"=>"Task attach was successfull!",
-                "code"=>200,
-                
-            ];
+           
 
-            return response()->json($success, 200);
+           
         }
         if(!empty($remove)){
             foreach($remove as $r){
@@ -544,17 +541,17 @@ class Api_Controller extends Controller
 
                     if(!empty($findAssignedTask)){
                         $findAssignedTask->delete();
-                        $success=[
-                            "message" => "User detached from this task!"
-                        ];
-                        return response()->json($success,200);
+                        //$findAssignedTask->save();
+                       
+                        
                     }else{
                         throw new Exception( "Datasbase error occured!");
                     }
                 }    
             }   
         }           
-                    
+        $success = ["message"=>"Success!"];
+        return response()->json($success,200);            
     }
 
     public function AttachMyself($project_id, $task_id){
@@ -1531,22 +1528,22 @@ class Api_Controller extends Controller
         foreach($findUserasParticipant as $parti){
             $findAssignedTask=AssignedTask::where("p_participant_id", $parti['id'])->get();
             foreach($findAssignedTask as $task){
-                $findTask=Tasks::where("id",$task['task_id'])->get();
+                $findTask=Tasks::where("id",$task['task_id'])->where("deadline", "<=", $urgentDay)->get();
                 if( $findTask->isNotEmpty()){
                     foreach($findTask as $t){
-                        $computedDays = now()->diffInDays($t['deadline']);
+                       // $computedDays = now()->diffInDays($t['deadline']);
                         $findTaskStatus=TaskStatus::where("id", $t->t_status)->first();
 
-                        if($computedDays <= 5){
+                        //if($computedDays <= 5){
                             $success[]=[
                                 "id"=>$t->id,
                                 "type"=>"Task",
                                 "title"=>$t->task_name,
                                 "status"=>$findTaskStatus['task_status'],
                                 "deadline"=>$t->deadline,
-                                "days"=>$computedDays
+                                //"days"=>$computedDays
                             ];
-                        }
+                        //}
                     }
                     
                 }
@@ -1589,13 +1586,13 @@ class Api_Controller extends Controller
         if(empty($findUserasParticipant)){
             throw new Exception("Denied!");
         }else{
-                $findAssignedTask=AssignedTask::where(["p_participant_id" => $findUserasParticipant->id, "task_id"=>$TaskData['task_id']])->first();
+                $findAssignedTask=AssignedTask::where(["p_participant_id" => $findUserasParticipant->id, "task_id"=>$TaskData['task_id']?? $TaskData['id']])->first();
                 if(empty($findAssignedTask)){
                     throw new Exception("Denied!");
                     
                 }else{
                     
-                    $findTask=Tasks::where("id", $TaskData['task_id'])->first();
+                    $findTask=Tasks::where("id", $TaskData['task_id']?? $TaskData['id'])->first();
                     $findStatus = TaskStatus::where("task_status", $TaskData['status'])->first();
                     if(!empty($findTask)){
                         
@@ -1625,29 +1622,37 @@ class Api_Controller extends Controller
     public function MyTasks(){
         $user= JWTAuth::parseToken()->authenticate();
         $success=[];
-        $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
+        $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
+        $findUserasParticipant=ProjectParticipants::where(["user_id"=>$user->id, "p_status"=>$findProjectStatus['id']])->get();
 
         foreach($findUserasParticipant as $parti){
             $findAssignedTask=AssignedTask::where("p_participant_id", $parti->id)->get();
             foreach($findAssignedTask as $assigned){
-                $findTask = Tasks::where("id",$assigned->task_id)->get();
-                foreach($findTask as $task){
-                    $findStatus = TaskStatus::where("id", $task->t_status)->first();
-                    $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
-                    $findProjectname = Projects::where("id", $task->p_id)->first();
+                $findStatus = TaskStatus::where('task_status', 'Active')->orWhere('task_status', 'Completed')->get();
+                foreach($findStatus as $status){
+                    $findTask = Tasks::where(["id"=>$assigned->task_id, "t_status"=>$status->id])->get();
 
-                    $success[]=[
-                        "id"=>$task->id,
-                        "name"=>$task->task_name,
-                        "deadline"=>$task->deadline,
-                        "description"=>$task->description,
-                        "projectName"=>$findProjectname['p_name'],
-                        "projectId"=>$findProjectname['id'],
-                        "status"=>$findStatus->task_status,
-                        "priority"=>$findPriority->task_priority,
-                        
-                    ];
+                    foreach($findTask as $task){
+                        //$findStatus = TaskStatus::where("id", $task->t_status)->first();
+                        $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+                        $findProjectname = Projects::where("id", $task->p_id)->first();
+
+                        $success[]=[
+                            "id"=>$task->id,
+                            "name"=>$task->task_name,
+                            "deadline"=>$task->deadline,
+                            "description"=>$task->description,
+                            "projectName"=>$findProjectname['p_name'],
+                            "projectId"=>$findProjectname['id'],
+                            "status"=>$status->task_status,
+                            "priority"=>$findPriority->task_priority,
+                            "priorityId"=>$findPriority->id
+                            
+                        ];
+                    }
                 }
+                
+                
             }
            
         }
