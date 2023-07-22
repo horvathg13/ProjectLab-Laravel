@@ -332,9 +332,10 @@ class Api_Controller extends Controller
 
         if ($validator->fails()){
             $response=[
-                "success" => false,
-                "message"=> $validator->errors()
+                "validatorError"=>$validator->errors()->all(),
             ];
+                
+           
             return response()->json($response, 400);
         }
 
@@ -708,237 +709,62 @@ class Api_Controller extends Controller
     }
     public function getMessages($projectId,$taskId,$participants){
 
-        if (empty($taskId)){
-            $user = JWTAuth::parseToken()->authenticate();
-            $filteredParticipants = json_decode($participants,true);
-            if(empty($filteredParticipants)){
-                throw new Exception('No participants in this project');
-            }
-            $filteredParticipants = array_filter($filteredParticipants, function($participant) use ($user) {
-                return $participant['id'] !== $user->id;
-            });
-            
+       
            
-          
-            $OtherUserMessages=[];
-            foreach($filteredParticipants as $fp){
-                $findOtherUserMessages= ChatMessages::where(["p_id" => $projectId,
-                "task_id"=> null, "sender_id"=>$fp['id']])->orderBy('created_at', 'asc')->get();
-                foreach($findOtherUserMessages as $foum){
+        
+        $user = JWTAuth::parseToken()->authenticate();
+       
+        $allMessages=[];
+        $findMessages= ChatMessages::where(["p_id" => $projectId,
+        "task_id"=> $taskId])->orderBy('created_at', 'asc')->get();
+        foreach($findMessages as $foum){
 
+        
+            $findSender = User::where("id", $foum->sender_id)->first();
+
+
+            $allMessages[]=[
                 
-                    //$findReceiver = User::where("id", $foum->receiver_id)->first();
-                    $findSender = User::where("id", $foum->sender_id)->first();
-
-
-                    $OtherUserMessages[]=[
-                        
-                        "sender_id"=>$findSender->id,
-                        "sender_name"=>$findSender->name,
-                        /*"receiver_id"=>$findReceiver->id,
-                        "receiver_name"=>$findReceiver->name,
-                        "receiver_email"=>$findReceiver->email,*/
-                        "message"=>$foum->message,
-                        "created_at"=>$foum->created_at
-                    ];
-                    
-                }
-            }
-
-            
-            $findOwnMessage = ChatMessages::where(["p_id" => $projectId,
-            "task_id"=> null, "sender_id"=>$user->id])->orderBy('created_at', 'asc')->get();
-                            
-            $OwnMessage=[];
-            
-            foreach($findOwnMessage as $m){
-                //$findReceiver = User::where("id", $m->receiver_id)->first();
-                $findSender = User::where("id", $m->sender_id)->first();
-
-
-                $OwnMessage[]=[
-                  
-                    "sender_id"=>$findSender->id,
-                    "sender_name"=>$findSender->name,
-                    /*"receiver_id"=>$findReceiver->id,
-                    "receiver_name"=>$findReceiver->name,
-                    "receiver_email"=>$findReceiver->email,*/
-                    "message"=>$m->message,
-                    "created_at"=>$m->created_at
-                ];
+                "sender_id"=>$findSender->id,
+                "sender_name"=>$findSender->name,
                 
-
-            }
-            $filterChatMessages=ChatMessages::where(["p_id" => $projectId,
-            "task_id"=> null])->where("sender_id","!=",$user->id)->get();
-            foreach($filterChatMessages as $message){
-                $findChatView = ChatView::where("chat_id", $message->id)->first();
-                if(empty($findChatView)){
-                    ChatView::create([
-                    "chat_id" => $message->id,
-                    ]);
-                }else{
-                    $findChatView->touch();
-                    $findChatView->update([
-                        "chat_id" => $message->id,
-                    ]);
-                }
-
-            }
-            
-            $allMessages=[];
-            
-            foreach($OwnMessage as $om){
-               $allMessages[]=
-               [
-                "sender_id" => $om["sender_id"],
-                "sender_name" => $om["sender_name"],
-                /*"receiver_id" => $om["receiver_id"],
-                "receiver_name" => $om["receiver_name"],
-                "receiver_email" => $om["receiver_email"],*/
-                "message" => $om["message"],
-                "created_at"=>$om['created_at']
-               ];
-            }
-            foreach ($OtherUserMessages as $otm) {
-                $allMessages[] = [
-                    "sender_id" => $otm["sender_id"],
-                    "sender_name" => $otm["sender_name"],
-                    /*"receiver_id" => $otm["receiver_id"],
-                    "receiver_name" => $otm["receiver_name"],
-                    "receiver_email" => $otm["receiver_email"],*/
-                    "message" => $otm["message"],
-                    "created_at" => $otm["created_at"]
-                ];
-            }
-            
-            usort($allMessages, function ($a, $b) {
-                return strtotime($a['created_at']) - strtotime($b['created_at']);
-            });
-            $success=[
-                "messageData"=> $allMessages,
-                "currentUser_id"=> $user->id,
-                "message"=>"Message Query was Successfull!"
+                "message"=>$foum->message,
+                "created_at"=>$foum->created_at
             ];
             
-            return response()->json($success, 200);
-           
-        }else{
-            $user = JWTAuth::parseToken()->authenticate();
-            $filteredParticipants = json_decode($participants,true);
-            if(empty($filteredParticipants)){
-                throw new Exception('No participants in this task');
-                /*return response()->json([
-                    "message"=>"No participants in this task!"
-                ],500);*/
-            }            
-            $filteredParticipants = array_filter($filteredParticipants, function($participant) use ($user) {
-                return $participant['id'] !== $user->id;
-            });            
-          
-            $OtherUserMessages=[];
-            foreach($filteredParticipants as $fp){
-                $findOtherUserMessages= ChatMessages::where(["p_id" => $projectId,
-                "task_id"=> $taskId, "sender_id"=>$fp['id']])->orderBy('created_at', 'asc')->get();
-                foreach($findOtherUserMessages as $foum){
-
-                
-                    //$findReceiver = User::where("id", $foum->receiver_id)->first();
-                    $findSender = User::where("id", $foum->sender_id)->first();
-
-
-                    $OtherUserMessages[]=[
-                        
-                        "sender_id"=>$findSender->id,
-                        "sender_name"=>$findSender->name,
-                        /*"receiver_id"=>$findReceiver->id,
-                        "receiver_name"=>$findReceiver->name,
-                        "receiver_email"=>$findReceiver->email,*/
-                        "message"=>$foum->message,
-                        "created_at"=>$foum->created_at
-                    ];
-                   
-                    
-                }
-            }
             
-            $findOwnMessage = ChatMessages::where(["p_id" => $projectId,
-            "task_id"=> $taskId, "sender_id"=>$user->id])->orderBy('created_at', 'asc')->get();
-                            
-            $OwnMessage=[];
-            
-            foreach($findOwnMessage as $m){
-                //$findReceiver = User::where("id", $m->receiver_id)->first();
-                $findSender = User::where("id", $m->sender_id)->first();
-
-
-                $OwnMessage[]=[
-                  
-                    "sender_id"=>$findSender->id,
-                    "sender_name"=>$findSender->name,
-                    /*"receiver_id"=>$findReceiver->id,
-                    "receiver_name"=>$findReceiver->name,
-                    "receiver_email"=>$findReceiver->email,*/
-                    "message"=>$m->message,
-                    "created_at"=>$m->created_at
-                ];
-                
-
-            }
-
-            $filterChatMessages=ChatMessages::where(["p_id" => $projectId,
-            "task_id"=> $taskId])->where("sender_id","!=",$user->id)->get();
-            foreach($filterChatMessages as $message){
-                $findChatView = ChatView::where("chat_id", $message->id)->first();
-                if(empty($findChatView)){
-                    ChatView::create([
-                    "chat_id" => $message->id,
-                    ]);
-                }else{
-                    $findChatView->touch();
-                    $findChatView->update([
-                        "chat_id" => $message->id,
-                    ]);
-                }
-
-            }
-            $allMessages=[];
-            
-            foreach($OwnMessage as $om){
-               $allMessages[]=
-               [
-                "sender_id" => $om["sender_id"],
-                "sender_name" => $om["sender_name"],
-                /*"receiver_id" => $om["receiver_id"],
-                "receiver_name" => $om["receiver_name"],
-                "receiver_email" => $om["receiver_email"],*/
-                "message" => $om["message"],
-                "created_at"=>$om['created_at']
-               ];
-            }
-            foreach ($OtherUserMessages as $otm) {
-                $allMessages[] = [
-                    "sender_id" => $otm["sender_id"],
-                    "sender_name" => $otm["sender_name"],
-                    /*"receiver_id" => $otm["receiver_id"],
-                    "receiver_name" => $otm["receiver_name"],
-                    "receiver_email" => $otm["receiver_email"],*/
-                    "message" => $otm["message"],
-                    "created_at" => $otm["created_at"]
-                ];
-            }
-            
-            usort($allMessages, function ($a, $b) {
-                return strtotime($a['created_at']) - strtotime($b['created_at']);
-            });
-            $success=[
-                "messageData"=> $allMessages,
-                "currentUser_id"=> $user->id,
-                "message"=>"Message Query was Successfull!"
-            ];
-            
-            return response()->json($success, 200);
         }
+        
+        
+       
+
+        $filterChatMessages=ChatMessages::where(["p_id" => $projectId,
+        "task_id"=> $taskId])->where("sender_id","!=",$user->id)->get();
+        foreach($filterChatMessages as $message){
+            $findChatView = ChatView::where("chat_id", $message->id)->first();
+            if(empty($findChatView)){
+                ChatView::create([
+                "chat_id" => $message->id,
+                ]);
+            }else{
+                $findChatView->touch();
+                $findChatView->update([
+                    "chat_id" => $message->id,
+                ]);
+            }
+
+        }
+       
+        
+       
+        $success=[
+            "messageData"=> $allMessages,
+            "currentUser_id"=> $user->id,
+            "message"=>"Message Query was Successfull!"
+        ];
+        
+        return response()->json($success, 200);
+        
 
     }
     
