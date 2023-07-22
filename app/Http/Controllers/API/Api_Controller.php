@@ -367,7 +367,7 @@ class Api_Controller extends Controller
                 return response()->json($success);
             }    
         }else{
-            $create= TaskStatus::create([
+            $create= Tasks::create([
                 "task_name"=>$validator->validated()['task_name'],
                 "deadline"=>$validator->validated()['deadline'],
                 "description"=>$validator->validated()['description'],
@@ -439,7 +439,7 @@ class Api_Controller extends Controller
 
     public function getTasks($id){
         $user=JWTAuth::parseToken()->authenticate();
-        $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();;
+        $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();
         
         $tasks= Tasks::where("p_id", $id)->get();
         $success=[];
@@ -465,6 +465,7 @@ class Api_Controller extends Controller
         }else{
             $success=[   
                 "message"=>"You have no tasks in this project!",
+                "haveManagerRole"=>$haveManagerRole,
                 "code"=>404,
             ];
             return response()->json($success,404);
@@ -1620,7 +1621,8 @@ class Api_Controller extends Controller
     }
 
     public function MyTasks(){
-        $user= JWTAuth::parseToken()->authenticate();
+        $jwt = JWTAuth::parseToken();
+        $user= $jwt->authenticate();
         $success=[];
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
         $findUserasParticipant=ProjectParticipants::where(["user_id"=>$user->id, "p_status"=>$findProjectStatus['id']])->get();
