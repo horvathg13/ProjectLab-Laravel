@@ -186,11 +186,11 @@ class Api_Controller extends Controller
 
         if ($validator->fails()){
             $response=[
-                "success" => false,
-                "message"=> $validator->errors()
+                "validatorError"=>$validator->errors()->all(),
             ];
             return response()->json($response, 400);
         }
+
         if($validator->validated()['p_id'] != 0){
             $findProject = Projects::where(["id"=>$validator->validated()['p_id']])->first();
             if($findProject != null){
@@ -599,11 +599,11 @@ class Api_Controller extends Controller
 
         if ($validator->fails()){
             $response=[
-                "success" => false,
-                "message"=> $validator->errors()
+                "validatorError"=>$validator->errors()->all(),
             ];
             return response()->json($response, 400);
         }
+        
         $participants = $validator->validated()['participants'];
         $project = $validator->validated()['project'];
         foreach($participants as $parti){
