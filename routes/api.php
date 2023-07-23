@@ -56,3 +56,4 @@ Route::post("notifications",[App\Http\Controllers\API\Api_Controller::class, "No
 Route::post("completed",[App\Http\Controllers\API\Api_Controller::class, "Completed"]);
 Route::post("get-my-tasks",[App\Http\Controllers\API\Api_Controller::class, "MyTasks"]);
 Route::post("getUserRole",[App\Http\Controllers\API\Api_Controller::class, "getUserRole"]);
+Route::post("sort",[App\Http\Controllers\API\Api_Controller::class, "Sort"]);

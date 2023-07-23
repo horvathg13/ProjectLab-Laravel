@@ -452,7 +452,7 @@ class Api_Controller extends Controller
             $success[]=[
                 "task_id"=>$task->id,
                 "task_name"=>$task->task_name,
-                "dedadline"=>$task->deadline,
+                "deadline"=>$task->deadline,
                 "description"=>$task->description,
                 "status"=>$findStatus->task_status,
                 "priority_id"=>$findPriority->id,
@@ -603,7 +603,7 @@ class Api_Controller extends Controller
             ];
             return response()->json($response, 400);
         }
-        
+
         $participants = $validator->validated()['participants'];
         $project = $validator->validated()['project'];
         foreach($participants as $parti){
@@ -1277,7 +1277,7 @@ class Api_Controller extends Controller
                     $success[]=[
                         "task_id"=>$task->id,
                         "task_name"=>$task->task_name,
-                        "dedadline"=>$task->deadline,
+                        "deadline"=>$task->deadline,
                         "description"=>$task->description,
                         "status"=>$findStatus->task_status,
                         "priority_id"=>$findPriority->id,
@@ -1515,6 +1515,39 @@ class Api_Controller extends Controller
         }
     }
     
+    public function Sort(Request $request){
+        $selectedSortId = $request->input('type');
+        $sortKey = $request->input('key');
+        $sortingArray = $request->input('data');
+
+        $data = [
+            'type' => $selectedSortId,
+            'key' => $sortKey,
+            'array'=>$sortingArray
+        ];
+    
+        $rules = [
+            'type' => 'required',
+            'key'=>'required',
+            'array'=>'required',
+        ];
+    
+        $validator = Validator::make($data, $rules);
         
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+        $success=[];
+        if($selectedSortId== 1){
+            $success = collect($sortingArray)->sortBy($sortKey)->values()->all();
+
+        }else{
+            $success = collect($sortingArray)->sortByDesc($sortKey)->values()->all();
+        }
+
+        return response()->json($success,200);
+
+    }     
     
 }
