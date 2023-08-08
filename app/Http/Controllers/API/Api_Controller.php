@@ -257,10 +257,67 @@ class Api_Controller extends Controller
         
     }
 
-    public function getProjects(){
+    public function getProjects(Request $request){
         /*$today=now();
         $projects = Projects::where("deadline", ">=", $today)->get();*/
-        $projects = Projects::all();
+
+        $sortData = $request->input('sortData');
+        $filterData = $request->input('filterData');
+        
+
+
+        $data = [
+            'sortData' => $sortData,
+            'filterData'=>$filterData,
+        ];
+    
+        $rules = [
+            'sortData'=>'nullable',
+            'filterData'=>'nullable',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+        
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $projectsQuery= Projects::query();
+        if(!empty($filterData)){
+            $ids=[];
+            foreach($filterData as $filter){
+                if(count($filter) == 1){
+                    foreach($filter as $f){
+                        $projectsQuery->where('p_status', $f['id']);
+                    
+                    }
+                }else{
+                    foreach($filter as $f){
+                        
+                        $ids[]=$f['id'];
+                        
+                        
+                        
+                    }
+                    if(!empty($ids)){
+                        $projectsQuery->whereIn('p_status', $ids);
+                    }
+
+                }
+                
+                
+            }
+
+        }
+        
+        if(!empty($sortData)){
+            foreach($sortData as $sort){
+                $projectsQuery->orderBy($sort['key'], $sort['abridgement']);
+            }
+            
+        }
+        $projects = $projectsQuery->get();
         $success =[];
   
        
