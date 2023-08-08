@@ -231,6 +231,12 @@ class Api_Controller extends Controller
 
             $create = Projects::create($credentials);
 
+            ProjectParticipants::create([
+                "user_id"=>$validator->validated()['p_manager_id'],
+                "p_id"=>$create->id,
+                "p_status" => $status->id,
+            ]);
+
             if(!$create){
                 $success=[   
                     "message"=>"Fail under create project",
@@ -438,16 +444,77 @@ class Api_Controller extends Controller
 
     
 
-    public function getTasks($id){
+    public function getTasks(Request $request){
         $user=JWTAuth::parseToken()->authenticate();
-        $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();
+
+        $id = $request->input('projectId');
+        $sortData = $request->input('sortData');
+        $filterData = $request->input('filterData');
         
-        $tasks= Tasks::where("p_id", $id)->get();
+
+
+        $data = [
+            'projectId' => $id,
+            'sortData' => $sortData,
+            'filterData'=>$filterData,
+        ];
+    
+        $rules = [
+            'projectId' => 'required',
+            'sortData'=>'nullable',
+            'filterData'=>'nullable',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+        
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();
+      
+        $taskQuery= Tasks::where("p_id", $id);
+        if(!empty($filterData)){
+            $ids=[];
+            foreach($filterData as $filter){
+                if(count($filter) == 1){
+                    foreach($filter as $f){
+                        $taskQuery->where('t_status', $f['id']);
+                    
+                    }
+                }else{
+                    foreach($filter as $f){
+                        
+                        $ids[]=$f['id'];
+                        
+                        
+                        
+                    }
+                    if(!empty($ids)){
+                        $taskQuery->whereIn('t_status', $ids);
+                    }
+
+                }
+                
+                
+            }
+
+        }
+        
+        if(!empty($sortData)){
+            foreach($sortData as $sort){
+                $taskQuery->orderBy($sort['key'], $sort['abridgement']);
+            }
+        }
+        $tasks = $taskQuery->get();
+        
         $success=[];
 
         foreach($tasks as $task){
             $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
             $findStatus = TaskStatus::where("id",$task->t_status)->first();
+
 
             $success[]=[
                 "task_id"=>$task->id,
@@ -461,16 +528,21 @@ class Api_Controller extends Controller
             ];
         }
 
-        if(!empty($success)){
-            return response()->json($success,200);
-        }else{
-            $success=[   
-                "message"=>"You have no tasks in this project!",
-                "haveManagerRole"=>$haveManagerRole,
-                "code"=>404,
-            ];
-            return response()->json($success,404);
-        }
+            if(!empty($success)){
+                $ids=[];
+                return response()->json($success,200);
+            }else{
+                $ids=[];
+                $success=[   
+                    "message"=>"You have no tasks in this project!",
+                    "haveManagerRole"=>$haveManagerRole,
+                    "code"=>404,
+                ];
+                return response()->json($success,404);
+            }
+            
+        
+       
     }
 
     public function getProjectParticipants($id){
