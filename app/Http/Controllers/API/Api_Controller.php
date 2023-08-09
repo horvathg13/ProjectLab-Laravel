@@ -591,7 +591,7 @@ class Api_Controller extends Controller
             $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
             $findStatus = TaskStatus::where("id",$task->t_status)->first();
             $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
-            $findMyTask = AssignedTask::where(["task_id"=>$task->id,"p_participant_id"=>$findUserasParticipant->id])->exists();
+            $findMyTask = $findUserasParticipant ? AssignedTask::where(["task_id"=>$task->id,"p_participant_id"=>$findUserasParticipant->id])->exists() : false;
             $success[]=[
                 "task_id"=>$task->id,
                 "task_name"=>$task->task_name,
@@ -1610,43 +1610,43 @@ class Api_Controller extends Controller
         
         $success = [];
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
-        $findUserasParticipant = ProjectParticipants::where(["user_id" => $user->id, "p_status" => $findProjectStatus['id']])->get();
+        $findUserasParticipant = ProjectParticipants::where(["user_id" => $user->id, "p_status" => $findProjectStatus['id']])->pluck('id');
         $findStatus = TaskStatus::whereIn('task_status', ['Active', 'Completed'])->pluck('id');
         $findTasks = null;
-        foreach ($findUserasParticipant as $parti) {
-            $findAssignedTask = AssignedTask::where("p_participant_id", $parti->id)->pluck('task_id');
-            $findTasksQuery = Tasks::whereIn('id', $findAssignedTask)->whereIn('t_status', $findStatus);
-                
-
-            if (!empty($sortData)) {
-                foreach ($sortData as $sort) {
-                    $findTasksQuery->orderBy($sort['key'], $sort['abridgement']);
-                }
-            }
-
-            $findTasks = $findTasksQuery->get();
-          
         
-            foreach ($findTasks as $task) {
-                $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
-                $findProjectname = Projects::where("id", $task->p_id)->first();
+        $findAssignedTask = AssignedTask::whereIn("p_participant_id", $findUserasParticipant)->pluck('task_id');
+        $findTasksQuery = Tasks::whereIn('id', $findAssignedTask)->whereIn('t_status', $findStatus);
+            
 
-                $status = TaskStatus::where('id', $task['t_status'])->first();
-
-                $success[] = [
-                    "id" => $task->id,
-                    "name" => $task->task_name,
-                    "deadline" => $task->deadline,
-                    "description" => $task->description,
-                    "projectName" => $findProjectname['p_name'],
-                    "projectId" => $findProjectname['id'],
-                    "status" => $status['task_status'],
-                    "priority" => $findPriority->task_priority,
-                    "priorityId" => $findPriority->id
-                ];
-                
+        if (!empty($sortData)) {
+            foreach ($sortData as $sort) {
+                $findTasksQuery->orderBy($sort['key'], $sort['abridgement']);
             }
-        }   
+        }
+
+        $findTasks = $findTasksQuery->get();
+        
+    
+        foreach ($findTasks as $task) {
+            $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+            $findProjectname = Projects::where("id", $task->p_id)->first();
+
+            $status = TaskStatus::where('id', $task['t_status'])->first();
+
+            $success[] = [
+                "id" => $task->id,
+                "name" => $task->task_name,
+                "deadline" => $task->deadline,
+                "description" => $task->description,
+                "projectName" => $findProjectname['p_name'],
+                "projectId" => $findProjectname['id'],
+                "status" => $status['task_status'],
+                "priority" => $findPriority->task_priority,
+                "priorityId" => $findPriority->id
+            ];
+            
+        }
+        
 
         if (empty($success)) {
             throw new Exception("You have no tasks!");
