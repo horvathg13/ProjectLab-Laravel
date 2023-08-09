@@ -530,7 +530,23 @@ class Api_Controller extends Controller
         }
 
         $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();
-      
+
+        $getGlobalRoles=[];
+        $users = User::where("id", $user->id)->get();
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+
+            
+            $getGlobalRoles[] = [
+               "roles" => $globalRoles,
+            ];
+        }
+
+        $haveAdminRole = $globalRoles->contains('Admin');
+        $haveParticipantRole = false;
+
+
         $taskQuery= Tasks::where("p_id", $id);
         if(!empty($filterData)){
             $ids=[];
@@ -565,14 +581,17 @@ class Api_Controller extends Controller
             }
         }
         $tasks = $taskQuery->get();
-        
+        $findUserasParticipant = ProjectParticipants::where(["p_id"=>$id, "user_id" => $user->id])->first();
+        if(!empty($findUserasParticipant)){
+            $haveParticipantRole = true;
+        }
         $success=[];
 
         foreach($tasks as $task){
             $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
             $findStatus = TaskStatus::where("id",$task->t_status)->first();
-
-
+            $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
+            $findMyTask = AssignedTask::where(["task_id"=>$task->id,"p_participant_id"=>$findUserasParticipant->id])->exists();
             $success[]=[
                 "task_id"=>$task->id,
                 "task_name"=>$task->task_name,
@@ -581,7 +600,11 @@ class Api_Controller extends Controller
                 "status"=>$findStatus->task_status,
                 "priority_id"=>$findPriority->id,
                 "priority"=>$findPriority->task_priority,
+                "employees"=>$findTaskParticiantsCount,
+                "mytask"=>$findMyTask,
                 "haveManagerRole"=>$haveManagerRole,
+                "haveAdminRole"=>$haveAdminRole,
+                "haveParticipantRole"=>$haveParticipantRole
             ];
         }
 
@@ -1575,48 +1598,58 @@ class Api_Controller extends Controller
         return response()->json($success,200);
     }
 
-    public function MyTasks(){
+    public function MyTasks(Request $request){
+
         $jwt = JWTAuth::parseToken();
-        $user= $jwt->authenticate();
-        $success=[];
+        $user = $jwt->authenticate();
+
+        $sortData = $request->input('sortData');
+        
+        $success = [];
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
-        $findUserasParticipant=ProjectParticipants::where(["user_id"=>$user->id, "p_status"=>$findProjectStatus['id']])->get();
-
-        foreach($findUserasParticipant as $parti){
-            $findAssignedTask=AssignedTask::where("p_participant_id", $parti->id)->get();
-            foreach($findAssignedTask as $assigned){
-                $findStatus = TaskStatus::where('task_status', 'Active')->orWhere('task_status', 'Completed')->get();
-                foreach($findStatus as $status){
-                    $findTask = Tasks::where(["id"=>$assigned->task_id, "t_status"=>$status->id])->get();
-
-                    foreach($findTask as $task){
-                        //$findStatus = TaskStatus::where("id", $task->t_status)->first();
-                        $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
-                        $findProjectname = Projects::where("id", $task->p_id)->first();
-
-                        $success[]=[
-                            "id"=>$task->id,
-                            "name"=>$task->task_name,
-                            "deadline"=>$task->deadline,
-                            "description"=>$task->description,
-                            "projectName"=>$findProjectname['p_name'],
-                            "projectId"=>$findProjectname['id'],
-                            "status"=>$status->task_status,
-                            "priority"=>$findPriority->task_priority,
-                            "priorityId"=>$findPriority->id
-                            
-                        ];
-                    }
-                }
+        $findUserasParticipant = ProjectParticipants::where(["user_id" => $user->id, "p_status" => $findProjectStatus['id']])->get();
+        $findStatus = TaskStatus::whereIn('task_status', ['Active', 'Completed'])->pluck('id');
+        $findTasks = null;
+        foreach ($findUserasParticipant as $parti) {
+            $findAssignedTask = AssignedTask::where("p_participant_id", $parti->id)->pluck('task_id');
+            $findTasksQuery = Tasks::whereIn('id', $findAssignedTask)->whereIn('t_status', $findStatus);
                 
+
+            if (!empty($sortData)) {
+                foreach ($sortData as $sort) {
+                    $findTasksQuery->orderBy($sort['key'], $sort['abridgement']);
+                }
+            }
+
+            $findTasks = $findTasksQuery->get();
+          
+        
+            foreach ($findTasks as $task) {
+                $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+                $findProjectname = Projects::where("id", $task->p_id)->first();
+
+                $status = TaskStatus::where('id', $task['t_status'])->first();
+
+                $success[] = [
+                    "id" => $task->id,
+                    "name" => $task->task_name,
+                    "deadline" => $task->deadline,
+                    "description" => $task->description,
+                    "projectName" => $findProjectname['p_name'],
+                    "projectId" => $findProjectname['id'],
+                    "status" => $status['task_status'],
+                    "priority" => $findPriority->task_priority,
+                    "priorityId" => $findPriority->id
+                ];
                 
             }
-           
-        }
-        if(empty($success)){
+        }   
+
+        if (empty($success)) {
             throw new Exception("You have no tasks!");
         }
-        return response()->json($success,200);
+       
+        return response()->json($success, 200);
     }
     
     public function getUserRole(){
