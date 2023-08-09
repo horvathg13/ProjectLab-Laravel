@@ -859,16 +859,18 @@ class Api_Controller extends Controller
         }
        
     }
-    public function getMessages($projectId,$taskId,$participants){
-
-       
-           
+    public function getMessages(Request $request){
         
         $user = JWTAuth::parseToken()->authenticate();
+
+        $projectId = $request->input('projectId');
+        $taskId = $request->input('taskId');
+        $participants=$request->input('participants');
        
         $allMessages=[];
         $findMessages= ChatMessages::where(["p_id" => $projectId,
         "task_id"=> $taskId])->orderBy('created_at', 'asc')->get();
+        
         foreach($findMessages as $foum){
 
         
@@ -933,14 +935,15 @@ class Api_Controller extends Controller
         foreach($findProjects as $projects){
           
             $findChatMessageByProjectId = ChatMessages::where("p_id", $projects['p_id'])->where("task_id", null)->where("sender_id","!=", $user->id)->get();
+            
             foreach($findChatMessageByProjectId as $findByProjectId){
                 $existsInChatView = ChatView::where("chat_id", $findByProjectId['id'])->exists();
-                if(!$existsInChatView){
+                if($existsInChatView==false){
                     $haveUnreadProjectMessages=true;
                     $Project[]=[
                         "UnreadProject_Project_id"=>$findByProjectId['p_id'],
                     ];
-                }else{
+                }/*else{
                     //ezt az else ágat át kellene gondolni, mert most minden üzenet új id-val szúródik be az
                     //adatbázisba. Így nem lesz olyan eset, amikor ugyanaz az id mégegyszer szerepelne. 
                     $findOpenedMessage= ChatView::where("chat_id",$findByProjectId['id'])->get();
@@ -954,7 +957,7 @@ class Api_Controller extends Controller
                             ];
                         }
                     }
-                }
+                }*/
                 
                 
             }
@@ -967,13 +970,13 @@ class Api_Controller extends Controller
                 $findChatMessageByTaskId=ChatMessages::where("p_id", $projects['p_id'])->where("task_id", $findByTaskId['task_id'])->where("sender_id","!=", $user->id)->get();
                 foreach($findChatMessageByTaskId as $ChatMessage){
                     $existsInChatView = ChatView::where("chat_id", $ChatMessage['id'])->exists();
-                    if(!$existsInChatView){
+                    if($existsInChatView==false){
                         $haveUnreadTaskMessages=true;
                         $Task[]=[
                             "UnreadTaskMessages_Task_id"=>$ChatMessage['task_id'],
                             "UnreadTask_Project_id"=>$ChatMessage['p_id']
                         ];
-                    }else{
+                    }/*else{
                         //szerintem itt is u.a. mint fent...
                         $findOpenedMessage= ChatView::where("chat_id",$ChatMessage['id'])->get();
 
@@ -987,7 +990,7 @@ class Api_Controller extends Controller
                                 ];
                             }
                         }
-                    }
+                    }*/
                     
                    
                         
