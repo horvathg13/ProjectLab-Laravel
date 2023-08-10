@@ -1011,94 +1011,6 @@ class Api_Controller extends Controller
         ];
         return response()->json($success,200);
 
-
-        /*$filterUserChatMessages= ChatMessages::where([
-            "receiver_id"=>$user->id,
-            
-        ])->where("sender_id", '!=', $user->id)->get();
-        
-        $messagesArray=[];
-        $count=0;
-        $mergeData=[];
-        foreach($filterUserChatMessages as $messages){
-           $filterChatViewing = ChatView::where("chat_id", $messages->id)->where("updated_at",">",$messages["created_at"])->get();
-           if($filterChatViewing){
-                $findNeverOpendChat = ChatView::where("chat_id",'!=', $messages["id"])->get();
-
-                foreach($filterChatViewing as $view){
-                    foreach($findNeverOpendChat as $neveropend){
-                        $mergeData[]=[
-                            "chatview"=>$view,
-                            "widthout"=>$neveropend,
-                        ];
-                        $count++;
-                    }
-                    
-                }
-                
-            }
-           
-
-        }
-        return response()->json([
-                    "data"=> $mergeData,
-                    "count"=>$count
-                ]);
-        /*if($filterChatViewing->isEmpty()){
-        
-            foreach($filterUserChatMessages as $messages){
-                $count++;
-                $messagesArray[]=[
-                    "message"=>$messages
-                ];
-            }
-            
-            
-            
-            
-            return response()->json([
-                "unreadmessages" => $count,
-                "messages"=>$messagesArray,
-                "filterChatViewing"=>$mergeData
-            ],200);
-    
-        
-            
-        }else if(!($filterChatViewing->isEmpty())){
-            foreach($filterChatViewing as $view){
-                if($view['updated_at']>=$messages['created_at']){
-                    $count++;
-                }
-            }
-            foreach($filterUserChatMessages as $messages){
-                $findNeverOpendChat = ChatView::where("chat_id",'!=', $messages["id"])->get();
-  
-            }
-            if(!$findNeverOpendChat->isEmpty()){
-            
-                $count += $findNeverOpendChat->count();
-    
-                return response()->json([
-                    "unreadmessages" => $count,
-                    
-                ],200);
-            }
-            
-        }
-           
-        
-            
-            
-        
-
-        return response()->json([
-            "unreadmessages" => $count,
-            "messages"=>$messagesArray,
-        ],200);*/
-            
-
-        
-
     }
 
     public function getProjectandTaskButtons($ProjectId){
@@ -1468,71 +1380,83 @@ class Api_Controller extends Controller
         
         if($findUserasProjectManager->isNotEmpty()){
             foreach($findUserasProjectManager as $manager){
-                //$computedDays = now()->diffInDays($manager->deadline);
-                //if($computedDays <= 5){
-                    $findUrgent=ProjectsStatus::where("id",$manager->p_status)->first();
-                    /*$manager->update([
-                      "p_status"=>$findUrgent['id'],
-                    ]);
-                    $manager->save();*/
-                   
-                    $success[]=[
-                        "id"=>$manager->id,
-                        "type"=>"Project",
-                        "title"=>$manager->p_name,
-                        "status"=>$findUrgent['p_status'],
-                        "deadline"=>$manager->deadline,
-                        //"days"=>$computedDays,
-                        
-                    ];
-                //}
+                
+                $findUrgent=ProjectsStatus::where("id",$manager->p_status)->first();
+                
+                
+                $success[]=[
+                    "id"=>$manager->id,
+                    "type"=>"Project",
+                    "title"=>$manager->p_name,
+                    "status"=>$findUrgent['p_status'],
+                    "deadline"=>$manager->deadline,
+                    
+                    
+                ];
+                
               
                 
                 
-                /*$findCompleted=ProjectsStatus::where(["p_status","Completed"])->first();
-                if($computed->days <= 0 && $manager->p_status !== $findCompleted['id']){
-                    $success[]=[
-                        "id"=>$manager->id,
-                        "type"=>"Project",
-                        "title"=>$manager->p_name,
-                        "status"=>$findCompleted['p_status'],
-                        "deadline"=>$manager->deadline,
-                        "days"=>$computed->days,
-                        
-                    ];
-                }*/
+                
             }
             
            
         }
+        $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->pluck('id');
         
-        $findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
+        $findAssignedTask=AssignedTask::whereIn("p_participant_id", $findUserasParticipant)->get();
+        foreach($findAssignedTask as $task){
+            $findTask=Tasks::where("id",$task['task_id'])->where("deadline", "<=", $urgentDay)->get();
+            if( $findTask->isNotEmpty()){
+                foreach($findTask as $t){
+                    
+                    $findTaskStatus=TaskStatus::where("id", $t->t_status)->first();
+
+                    
+                    $success[]=[
+                        "id"=>$t->id,
+                        "type"=>"Task",
+                        "title"=>$t->task_name,
+                        "status"=>$findTaskStatus['task_status'],
+                        "deadline"=>$t->deadline,
+                        
+                    ];
+                    
+                }
+                
+            }
+
+        }
+            
+        
+        
+        /*$findUserasParticipant=ProjectParticipants::where("user_id", $user->id)->get();
         foreach($findUserasParticipant as $parti){
             $findAssignedTask=AssignedTask::where("p_participant_id", $parti['id'])->get();
             foreach($findAssignedTask as $task){
                 $findTask=Tasks::where("id",$task['task_id'])->where("deadline", "<=", $urgentDay)->get();
                 if( $findTask->isNotEmpty()){
                     foreach($findTask as $t){
-                       // $computedDays = now()->diffInDays($t['deadline']);
+                       
                         $findTaskStatus=TaskStatus::where("id", $t->t_status)->first();
 
-                        //if($computedDays <= 5){
-                            $success[]=[
-                                "id"=>$t->id,
-                                "type"=>"Task",
-                                "title"=>$t->task_name,
-                                "status"=>$findTaskStatus['task_status'],
-                                "deadline"=>$t->deadline,
-                                //"days"=>$computedDays
-                            ];
-                        //}
+                        
+                        $success[]=[
+                            "id"=>$t->id,
+                            "type"=>"Task",
+                            "title"=>$t->task_name,
+                            "status"=>$findTaskStatus['task_status'],
+                            "deadline"=>$t->deadline,
+                            
+                        ];
+                        
                     }
                     
                 }
 
             }
             
-        }
+        }*/
             
         
 
