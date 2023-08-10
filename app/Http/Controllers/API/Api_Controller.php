@@ -745,8 +745,9 @@ class Api_Controller extends Controller
     public function createParticipants(Request $request){
 
         $validator = Validator::make($request->all(),[
-            "participants" => "required",
-            "project" => "required"
+            "participants" => "nullable",
+            "project" => "required",
+            "remove"=>"nullable"
         ]);
 
         if ($validator->fails()){
@@ -756,28 +757,54 @@ class Api_Controller extends Controller
             return response()->json($response, 400);
         }
 
-        $participants = $validator->validated()['participants'];
+        $participants = $request->input('participants');
         $project = $validator->validated()['project'];
-        foreach($participants as $parti){
-            $findParticipants= ProjectParticipants::where(["user_id"=>$parti['id'], "p_id"=>$project['project_id']])->exists();
-            if($findParticipants == true){
-                throw new Exception("Participants already attached!");
-            }else{
-                $find_status_id = ProjectsStatus::where("p_status", $project["status"])->first();
-                ProjectParticipants::create([
-                    "user_id"=>$parti['id'],
-                    "p_id"=>$project['project_id'],
-                    'p_status'=>$find_status_id->id
+        $remove = $request->input('remove');
+        if(!empty($participants)){
+            foreach($participants as $parti){
+                $findParticipants= ProjectParticipants::where(["user_id"=>$parti['id'], "p_id"=>$project['project_id']])->exists();
+                if($findParticipants == true){
+                    throw new Exception("Participants already attached!");
+                }else{
+                    $find_status_id = ProjectsStatus::where("p_status", $project["status"])->first();
+                    ProjectParticipants::create([
+                        "user_id"=>$parti['id'],
+                        "p_id"=>$project['project_id'],
+                        'p_status'=>$find_status_id->id
 
-                ]);
+                    ]);
+                }
+                
+            };
+            $success=[
+                "message"=>"Thats it! Participants created Successfull",
+                "code"=>200,
+                
+            ];
+        }
+        
+        if(!empty($remove)){
+            
+            foreach($remove as $r){
+                $findParticipantId = ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->first();
+                
+                if(empty($findParticipantId)){
+                    throw new Exception("Datasbase error: User does not found!");
+                   
+                }else{
+                    $findTasks = Tasks::where("p_id",$project['project_id'])->pluck('id');
+                    ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->update(["p_id"=>null]);
+                    
+                        
+                    AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->update(["p_participant_id"=>null]);
+                }    
             }
-            
-        };
-        $success=[
-            "message"=>"Thats it! Participants created Successfull",
-            "code"=>200,
-            
-        ];
+            $success=[
+                "message"=>"Thats it!",
+                "code"=>200,
+                
+            ];  
+        }           
 
         return response()->json($success,200);
        
