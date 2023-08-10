@@ -793,10 +793,11 @@ class Api_Controller extends Controller
                    
                 }else{
                     $findTasks = Tasks::where("p_id",$project['project_id'])->pluck('id');
-                    ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->update(["p_id"=>null]);
+                    AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->delete();
+                    ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->delete();
                     
                         
-                    AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->update(["p_participant_id"=>null]);
+                    
                 }    
             }
             $success=[

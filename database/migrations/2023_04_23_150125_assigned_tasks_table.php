@@ -17,7 +17,7 @@ class AssignedTasksTable extends Migration
             $table->id();
             $table->unsignedBigInteger("task_id");
             $table->foreign("task_id")->references("id")->on("tasks");
-            $table->unsignedBigInteger("p_participant_id")->nullable();
+            $table->unsignedBigInteger("p_participant_id");
             $table->foreign("p_participant_id")->references("id")->on("project_participants");
             $table->timestamps();
         });
