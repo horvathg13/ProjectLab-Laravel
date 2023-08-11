@@ -57,3 +57,6 @@ Route::post("completed",[App\Http\Controllers\API\Api_Controller::class, "Comple
 Route::post("get-my-tasks",[App\Http\Controllers\API\Api_Controller::class, "MyTasks"]);
 Route::post("getUserRole",[App\Http\Controllers\API\Api_Controller::class, "getUserRole"]);
 Route::post("sort",[App\Http\Controllers\API\Api_Controller::class, "Sort"]);
+Route::post("add-favorite-project",[App\Http\Controllers\API\Api_Controller::class, "addFavoriteProject"]);
+Route::post("remove-favorite-project",[App\Http\Controllers\API\Api_Controller::class, "removeFromFavorite"]);
+Route::post("get-favorite-projects",[App\Http\Controllers\API\Api_Controller::class, "getFavoriteProjects"]);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AssignedTask;
 use App\Models\ChatMessages;
 use App\Models\ChatView;
+use App\Models\FavoriteProjects;
 use App\Models\ProjectParticipants;
 use App\Models\Projects;
 use App\Models\ProjectsStatus;
@@ -260,7 +261,7 @@ class Api_Controller extends Controller
     public function getProjects(Request $request){
         /*$today=now();
         $projects = Projects::where("deadline", ">=", $today)->get();*/
-
+        $user=JWTAuth::parseToken()->authenticate();
         $sortData = $request->input('sortData');
         $filterData = $request->input('filterData');
         
@@ -324,7 +325,7 @@ class Api_Controller extends Controller
         foreach($projects as $project){
             $findManager = User::where("id", $project->p_manager_id)->first();
             $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
-        
+            $findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
 
             $success[] =[
                 "project_id" => $project->id,
@@ -333,7 +334,8 @@ class Api_Controller extends Controller
                 "manager_email"=>$findManager->email,
                 "name"=>$project->p_name,
                 "status"=>$findStatus->p_status,
-                "deadline"=>$project->deadline
+                "deadline"=>$project->deadline,
+                "favorite"=>$findFavorite
             ];
 
            
@@ -1667,4 +1669,146 @@ class Api_Controller extends Controller
 
     }     
     
+    public function addFavoriteProject(Request $request){
+        $user= JWTAuth::parseToken()->authenticate();
+        $projectData = $request->input('project');
+
+        $findProjectInFavorite = FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectData['project_id']])->exists();
+        if($findProjectInFavorite === false){
+            FavoriteProjects::create([
+                "added_by"=>$user->id,
+                "project_id"=>$projectData['project_id']
+            ]);
+        }else{
+            throw new Exception("Project already added to your favorites!");
+        }
+
+        $success=[
+            "message"=>"That's your favorite!"
+        ];
+
+        return response()->json($success,200);
+    }
+
+    public function removeFromFavorite(Request $request){
+        $user= JWTAuth::parseToken()->authenticate();
+        $projectData = $request->input('project');
+
+        $findProjectInFavorite = FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectData['project_id']])->exists();
+        if($findProjectInFavorite == true){
+            FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectData['project_id']])->delete();
+        }else{
+            throw new Exception("Project does not exists in your favorites!");
+        }
+        $success=[
+            "message"=>"Project removed from favorites!"
+        ];
+        return response()->json($success,200);
+    }
+
+    public function getFavoriteProjects(Request $request){
+        $user= JWTAuth::parseToken()->authenticate();
+        $sortData = $request->input('sortData');
+        $filterData = $request->input('filterData');
+
+        $findProjectById = FavoriteProjects::where("added_by",$user->id)->pluck('project_id');
+        
+        /*$projectsQuery= Projects::query();
+        if(!empty($filterData)){
+            $ids=[];
+            foreach($filterData as $filter){
+                if(count($filter) == 1){
+                    foreach($filter as $f){
+                        $projectsQuery->where('p_status', $f['id']);
+                    
+                    }
+                }else{
+                    foreach($filter as $f){
+                        
+                        $ids[]=$f['id'];
+                        
+                        
+                        
+                    }
+                    if(!empty($ids)){
+                        $projectsQuery->whereIn('p_status', $ids);
+                    }
+
+                }
+                
+                
+            }
+
+        }
+        
+        if(!empty($sortData)){
+            foreach($sortData as $sort){
+                $projectsQuery->orderBy($sort['key'], $sort['abridgement']);
+            }
+            
+        }
+        $projects = $projectsQuery->get();*/
+        $success=[];
+        if(empty($findProjectById)){
+            throw new Exception("You have no favorite project");
+        }else{
+            $findProject = Projects::whereIn("id",$findProjectById);
+            if(!empty($filterData)){
+                $ids=[];
+                foreach($filterData as $filter){
+                    if(count($filter) == 1){
+                        foreach($filter as $f){
+                            $findProject->where('p_status', $f['id']);
+                        
+                        }
+                    }else{
+                        foreach($filter as $f){
+                            
+                            $ids[]=$f['id'];
+                            
+                            
+                            
+                        }
+                        if(!empty($ids)){
+                            $findProject->whereIn('p_status', $ids);
+                        }
+    
+                    }
+                    
+                    
+                }
+    
+            }
+            
+            if(!empty($sortData)){
+                foreach($sortData as $sort){
+                    $findProject->orderBy($sort['key'], $sort['abridgement']);
+                }
+                
+            }
+            $projects = $findProject->get();
+
+            foreach($projects as $project){
+                $findManager = User::where("id", $project->p_manager_id)->first();
+                $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
+                $findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
+    
+                $success[] =[
+                    "project_id" => $project->id,
+                    "manager_id"=>$project->p_manager_id,
+                    "manager" => $findManager->name,
+                    "manager_email"=>$findManager->email,
+                    "name"=>$project->p_name,
+                    "status"=>$findStatus->p_status,
+                    "deadline"=>$project->deadline,
+                    "favorite"=>$findFavorite
+                ];
+    
+               
+            }
+
+            return response()->json($success,200);
+
+        }
+    }
 }
