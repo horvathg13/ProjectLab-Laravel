@@ -1300,6 +1300,20 @@ class Api_Controller extends Controller
                     
                 } 
                 return response()->json($findProjectTasks,200);
+            }else if($PriorityId !== null && $SetAllPriorityBool===false){
+                $findTask = Tasks::where(["p_id"=> $ProjectId, "id"=>$TaskId])->first();
+                if(empty($findTask)){
+                    throw new Exception("Task does not exists");
+                }else{
+                    
+                    $findTask->touch();
+                    $findTask->update([
+                        "t_priority"=>$PriorityId
+                    ]);
+                  
+                    
+                } 
+                return response()->json($findTask,200);
             }
            
 
@@ -1810,5 +1824,342 @@ class Api_Controller extends Controller
             return response()->json($success,200);
 
         }
+    }
+
+    public function getManagerProjects(Request $request){
+        $user=JWTAuth::parseToken()->authenticate();
+        $sortData = $request->input('sortData');
+        $filterData = $request->input('filterData');
+
+        $data = [
+            'sortData' => $sortData,
+            'filterData'=>$filterData,
+        ];
+    
+        $rules = [
+            'sortData'=>'nullable',
+            'filterData'=>'nullable',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+        
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
+        $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id]);
+
+        if(!empty($filterData)){
+            $ids=[];
+            foreach($filterData as $filter){
+                if(count($filter) == 1){
+                    foreach($filter as $f){
+                        $projectsQuery->where('p_status', $f['id']);
+                    
+                    }
+                }else{
+                    foreach($filter as $f){
+                        
+                        $ids[]=$f['id'];
+                        
+                        
+                        
+                    }
+                    if(!empty($ids)){
+                        $projectsQuery->whereIn('p_status', $ids);
+                    }
+
+                }
+                
+                
+            }
+
+        }
+        
+        if(!empty($sortData)){
+            foreach($sortData as $sort){
+                $projectsQuery->orderBy($sort['key'], $sort['abridgement']);
+            }
+            
+        }
+        $projects = $projectsQuery->get();
+
+        $success =[];
+  
+       
+        foreach($projects as $project){
+            $findManager = User::where("id", $project->p_manager_id)->first();
+            $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
+            $findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
+
+            $success[] =[
+                "project_id" => $project->id,
+                "manager_id"=>$project->p_manager_id,
+                "manager" => $findManager->name,
+                "manager_email"=>$findManager->email,
+                "name"=>$project->p_name,
+                "status"=>$findStatus->p_status,
+                "deadline"=>$project->deadline,
+                "favorite"=>$findFavorite
+            ];
+
+           
+        }
+
+        if(!empty($success)){
+            return response()->json($success,200);
+        }else{
+            $success=[   
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($success);
+        }
+    }
+
+    public function getManagerTasks(Request $request){
+        $user=JWTAuth::parseToken()->authenticate();
+
+        $sortData = $request->input('sortData');
+        $filterData = $request->input('filterData');
+
+        $data = [
+            'sortData' => $sortData,
+            'filterData'=>$filterData,
+        ];
+    
+        $rules = [
+            'sortData'=>'nullable',
+            'filterData'=>'nullable',
+        ];
+    
+        $validator = Validator::make($data, $rules);
+        
+    
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+        $getGlobalRoles=[];
+        $users = User::where("id", $user->id)->get();
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+
+            
+            $getGlobalRoles[] = [
+               "roles" => $globalRoles,
+            ];
+        }
+
+        $haveManagerRole = $globalRoles->contains('Manager');
+        if($haveManagerRole===true){
+            $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
+            $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
+            $taskQuery = Tasks::whereIn("p_id",$projectsQuery);
+                if(!empty($filterData)){
+                    $ids=[];
+                    foreach($filterData as $filter){
+                        if(count($filter) == 1){
+                            foreach($filter as $f){
+                                $taskQuery->where('t_status', $f['id']);
+                            }
+                        }else{
+                            foreach($filter as $f){
+                                
+                                $ids[]=$f['id'];
+                                
+                                
+                                
+                            }
+                            if(!empty($ids)){
+                                $taskQuery->whereIn('t_status', $ids);
+                            }
+
+                        }
+                        
+                        
+                    }
+
+                }
+                
+                if(!empty($sortData)){
+                    foreach($sortData as $sort){
+                        $taskQuery->orderBy($sort['key'], $sort['abridgement']);
+                    }
+                }
+                $tasks = $taskQuery->get();
+                
+                $success=[];
+
+                foreach($tasks as $task){
+                    $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+                    $findStatus = TaskStatus::where("id",$task->t_status)->first();
+                    $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
+                    $success[]=[
+                        "task_id"=>$task->id,
+                        "task_name"=>$task->task_name,
+                        "deadline"=>$task->deadline,
+                        "description"=>$task->description,
+                        "status"=>$findStatus->task_status,
+                        "priority_id"=>$findPriority->id,
+                        "priority"=>$findPriority->task_priority,
+                        "employees"=>$findTaskParticiantsCount,
+                        "haveManagerRole"=>$haveManagerRole,
+                        "p_id"=>$task->p_id
+                    ];
+                }
+
+                    if(!empty($success)){
+                        $ids=[];
+                        return response()->json($success,200);
+                    }/*else{
+                        $ids=[];
+                        $success=[   
+                            "message"=>"You have no tasks in this project!",
+                            "haveManagerRole"=>$haveManagerRole,
+                            "code"=>404,
+                        ];
+                        return response()->json($success,404);
+                    }*/
+        }else{
+            throw new Exception("Access Denied");
+        }
+
+        
+    }
+
+    public function managerNotification(Request $request){
+        $user=JWTAuth::parseToken()->authenticate();
+        $users = User::where("id", $user->id)->get();
+        $sortData = [
+            "abridgement"=>'ASC',
+            "id"=>1,
+            "key"=>"deadlie",
+            "name"=>"Ascending"
+        ];
+        $filterData = [
+            [
+                "id"=>4,
+                "name"=>"Completed",
+            ]
+           
+        ];
+        $getGlobalRoles=[];
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+
+            
+            $getGlobalRoles[] = [
+               "roles" => $globalRoles,
+            ];
+        }
+
+        $haveManagerRole = $globalRoles->contains('Manager');
+        if($haveManagerRole===true){
+            $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
+            $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
+            $taskQuery = Tasks::whereIn("p_id",$projectsQuery);
+                if(!empty($filterData)){
+                    $ids=[];
+                    foreach($filterData as $filter){
+                        if(count($filter) == 1){
+                            foreach($filter as $f){
+                                $taskQuery->where('t_status', $f['id']);
+                            }
+                        }/*else{
+                            foreach($filter as $f){
+                                
+                                $ids[]=$f['id'];
+                                
+                                
+                                
+                            }
+                            if(!empty($ids)){
+                                $taskQuery->whereIn('t_status', $ids);
+                            }
+
+                        }*/
+                        
+                        
+                    }
+
+                }
+                
+                if(!empty($sortData)){
+                    foreach($sortData as $sort){
+                        $taskQuery->orderBy($sort['key'], $sort['abridgement']);
+                    }
+                }
+                $tasks = $taskQuery->get();
+                
+                $success=[];
+
+                foreach($tasks as $task){
+                    $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
+                    $findStatus = TaskStatus::where("id",$task->t_status)->first();
+                    $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
+                    $success[]=[
+                        "task_id"=>$task->id,
+                        "task_name"=>$task->task_name,
+                        "deadline"=>$task->deadline,
+                        "description"=>$task->description,
+                        "status"=>$findStatus->task_status,
+                        "priority_id"=>$findPriority->id,
+                        "priority"=>$findPriority->task_priority,
+                        "employees"=>$findTaskParticiantsCount,
+                        "haveManagerRole"=>$haveManagerRole,
+                    ];
+                }
+
+                    if(!empty($success)){
+                        $ids=[];
+                        return response()->json($success,200);
+                    }else{
+                        $ids=[];
+                        $success=[   
+                            "message"=>"You have no tasks in this project!",
+                            "haveManagerRole"=>$haveManagerRole,
+                            "code"=>404,
+                        ];
+                        return response()->json($success,404);
+                    }
+        }else{
+            throw new Exception("Access Denied");
+        }
+
+    }
+
+    public function getManagerNotification(){
+        $user=JWTAuth::parseToken()->authenticate();
+        $users = User::where("id", $user->id)->get();
+       
+        $getGlobalRoles=[];
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+
+            
+            $getGlobalRoles[] = [
+               "roles" => $globalRoles,
+            ];
+        }
+
+        $haveManagerRole = $globalRoles->contains('Manager');
+        if($haveManagerRole===true){
+            $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
+            $findTasksStatus = TaskStatus::where("task_status", "Completed")->first();
+            $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
+            $taskQuery = Tasks::whereIn("p_id",$projectsQuery)->where("t_status",$findTasksStatus->id);
+               
+            $tasks = $taskQuery->count();
+            
+            
+            return response()->json($tasks,200);
+                    
+        }
+
     }
 }

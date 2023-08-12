@@ -60,3 +60,6 @@ Route::post("sort",[App\Http\Controllers\API\Api_Controller::class, "Sort"]);
 Route::post("add-favorite-project",[App\Http\Controllers\API\Api_Controller::class, "addFavoriteProject"]);
 Route::post("remove-favorite-project",[App\Http\Controllers\API\Api_Controller::class, "removeFromFavorite"]);
 Route::post("get-favorite-projects",[App\Http\Controllers\API\Api_Controller::class, "getFavoriteProjects"]);
+Route::post("get-manager-projects",[App\Http\Controllers\API\Api_Controller::class, "getManagerProjects"]);
+Route::post("get-manager-tasks",[App\Http\Controllers\API\Api_Controller::class, "getManagerTasks"]);
+Route::post("get-manager-notification",[App\Http\Controllers\API\Api_Controller::class, "getManagerNotification"]);
