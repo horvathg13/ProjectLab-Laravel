@@ -29,7 +29,7 @@ Route::post("resetpassword",[App\Http\Controllers\RegisterControllers\RegisterCo
 Route::post("createrole",[App\Http\Controllers\API\Api_Controller::class, "createRole"]);
 Route::post("getroles",[App\Http\Controllers\API\Api_Controller::class, "getRoles"]);
 Route::post("getusers",[App\Http\Controllers\API\Api_Controller::class, "getUsers"]);
-Route::post("user-to-role/{id}/{role}",[App\Http\Controllers\API\Api_Controller::class, "userToRole"]);
+Route::post("user-to-role",[App\Http\Controllers\API\Api_Controller::class, "userToRole"]);
 Route::post("password-reset-manual/{id}",[App\Http\Controllers\RegisterControllers\RegisterController::class, "passwordResetManual"]);
 Route::post("createproject",[App\Http\Controllers\API\Api_Controller::class, "createProject"]);
 Route::post("getprojects",[App\Http\Controllers\API\Api_Controller::class, "getProjects"]);

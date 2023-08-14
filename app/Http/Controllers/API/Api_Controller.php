@@ -134,45 +134,77 @@ class Api_Controller extends Controller
        
     }
 
-    public function userToRole($id,$role){
-        $user = User::find($id);
-        $RegisteredRole = Roles::where("role_name", $role)->first();
-
-        if (!$user){
-            $success=[   
-                "message"=>"Invalid User",
-                "code"=>404,
-            ];
-            return response()->json($success);
-        }else if(!$RegisteredRole){
-            $success=[   
-                "message"=>"Non registered role",
-                "code"=>404,
-            ];
-            return response()->json($success);
+    public function userToRole(Request $request){
+        $checkUser=JWTAuth::parseToken()->authenticate();
+        $getGlobalRoles=[];
+        $users = User::where("id", $checkUser->id)->first();
+        
+        $roles = $users->roles()->get();
+        foreach($roles as $role){
+            $getGlobalRoles[] = $role->role_name;
+               
+            
         }
-
-        $credentials=[
-            'user_id' => $user->id,
-            'role_id' => $RegisteredRole->id
-        ];
-
-        $role= RoleToUser::create($credentials);
+        
         
 
-        if(!$role){
-            $success=[   
-                "message"=>"Attached not work",
-                "code"=>404,
+        $haveAdminRole = in_array("Admin",$getGlobalRoles);
+        if($haveAdminRole==true){
+            $role = $request->input('role_id');
+            $id = $request->input('user_id');
+
+            $data=[
+                "role_id"=>$role,
+                "user_id"=>$id
             ];
-            return response()->json($success);
+            $rules=[
+                "role_id"=>"required",
+                "user_id"=>"required",
+            ];
+            $validator = Validator::make($data, $rules);
+        
+    
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+
+            $findUser = User::find($id);
+
+
+            if (!$findUser){
+                $success=[   
+                    "message"=>"Invalid User",
+                    "code"=>404,
+                ];
+                return response()->json($success);
+            }
+            
+            $findUserRole=RoleToUser::where("role_id",$findUser->id)->exists();
+            if($findUserRole==true){
+                $credentials=[
+                    'user_id' => $findUser->id,
+                    'role_id' => $role
+                ];
+
+                $role= RoleToUser::create($credentials);
+                
+
+                
+                $success=[   
+                    "message"=>"Thats it!",
+                    "code"=>200,
+                ];
+                return response()->json($success);
+                
+            }else{
+                throw new Exception("Role already attached to user!");
+            }
+
+           
         }else{
-            $success=[   
-                "message"=>"Thats it!",
-                "code"=>200,
-            ];
-            return response()->json($success);
+            throw new Exception("You do not have the correct role for this operation!");
         }
+        
     }
 
     public function createProject(Request $request){
