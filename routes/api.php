@@ -65,4 +65,4 @@ Route::post("get-manager-tasks",[App\Http\Controllers\API\Api_Controller::class,
 Route::post("get-manager-notification",[App\Http\Controllers\API\Api_Controller::class, "getManagerNotification"]);
 Route::post("managed-completed-tasks",[App\Http\Controllers\API\Api_Controller::class, "managedCompletedTasks"]);
 Route::post("accept-all-task",[App\Http\Controllers\API\Api_Controller::class, "acceptAllTask"]);
-
+Route::post("leave-project",[App\Http\Controllers\API\Api_Controller::class, "leaveProject"]);
