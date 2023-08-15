@@ -17,7 +17,7 @@ class TasksTable extends Migration
             $table->id();
             $table->string("task_name",255);
             $table->date("deadline");
-            $table->text("description");
+            $table->text("description")->nullable();
             $table->unsignedBigInteger("p_id");
             $table->foreign("p_id")->references("id")->on("projects");
             $table->unsignedBigInteger("t_status");
