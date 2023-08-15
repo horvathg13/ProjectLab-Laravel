@@ -145,8 +145,6 @@ class Api_Controller extends Controller
                
             
         }
-        
-        
 
         $haveAdminRole = in_array("Admin",$getGlobalRoles);
         if($haveAdminRole==true){
@@ -178,9 +176,9 @@ class Api_Controller extends Controller
                 ];
                 return response()->json($success);
             }
-            
-            $findUserRole=RoleToUser::where("role_id",$findUser->id)->exists();
-            if($findUserRole==true){
+
+            $findUserRoles=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$role])->exists();
+            if($findUserRoles===false){
                 $credentials=[
                     'user_id' => $findUser->id,
                     'role_id' => $role
@@ -195,11 +193,9 @@ class Api_Controller extends Controller
                     "code"=>200,
                 ];
                 return response()->json($success);
-                
             }else{
                 throw new Exception("Role already attached to user!");
             }
-
            
         }else{
             throw new Exception("You do not have the correct role for this operation!");
@@ -323,14 +319,11 @@ class Api_Controller extends Controller
                 if(count($filter) == 1){
                     foreach($filter as $f){
                         $projectsQuery->where('p_status', $f['id']);
-                    
                     }
                 }else{
                     foreach($filter as $f){
                         
                         $ids[]=$f['id'];
-                        
-                        
                         
                     }
                     if(!empty($ids)){
@@ -418,7 +411,7 @@ class Api_Controller extends Controller
 
         $validator = Validator::make($request->all(),[
             "task_name" => "required",
-            "description" => "required",
+            "description" => "nullable",
             "deadline"=> "required|date_format:Y-m-d|after_or_equal:today",
             "project_id"=> "required",
             "task_priority"=>"required",
@@ -886,7 +879,7 @@ class Api_Controller extends Controller
         
         
 
-        if($participants != null && $message != null && $data != null){
+        if($message !== null && $data !== null){
             $user = JWTAuth::parseToken()->authenticate();
 
             $create = ChatMessages::create([
@@ -899,11 +892,8 @@ class Api_Controller extends Controller
 
             $create= true;
             if(!$create){
-                $success=[   
-                    "message"=>"Fail under sending message!",
-                    "code"=>500,
-                ];
-                return response()->json($success);
+                throw new Exception("Fail under sending message!");  
+                   
             }else{
                 $success=[   
                     "message"=>"That's it!",
@@ -914,10 +904,8 @@ class Api_Controller extends Controller
                 return response()->json($success);
             }
         }else{
-            $fail=[
-                "message" => "Undefined data sent."
-            ];
-            return response()->json($fail);
+            throw new Exception("Undefined data sent");
+               
         }
        
     }
@@ -2214,5 +2202,30 @@ class Api_Controller extends Controller
             throw new Exception("Access Denied");
         }        
 
+    }
+
+    public function leaveProject(Request $request){
+        $user=JWTAuth::parseToken()->authenticate();
+
+        $projectId = $request->input('projectId');
+        var_dump($projectId);
+        $findUser=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$projectId])->first();
+        
+        $findAssignedTasks=AssignedTask::where("p_participant_id",$findUser['id'])->get();
+        
+        $findAssignedTasks->each->delete();
+        
+
+        
+        $findUser->delete();
+
+        $findProjectInFavorite = FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->get();
+        
+        $findProjectInFavorite->each->delete();
+            //FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->delete();
+       
+
+        $success="You leave this project";
+        return response()->json($success,200);
     }
 }
