@@ -17,7 +17,7 @@ class Auth_Controller extends Controller
         if (Auth::attempt(["email"=>$request->email, "password"=>$request->password])) {
 
             $finduser= User::where("email", $request->email)->first();
-            if($finduser->status !== "banned"){
+            if($finduser->status !== "Banned"){
                 $user = Auth::user();
                 $token = JWTAuth::fromUser($user);
                 $success = [];
