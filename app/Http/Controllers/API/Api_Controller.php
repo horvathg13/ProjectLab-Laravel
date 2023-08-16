@@ -1807,25 +1807,16 @@ class Api_Controller extends Controller
                     if(count($filter) == 1){
                         foreach($filter as $f){
                             $findProject->where('p_status', $f['id']);
-                        
                         }
                     }else{
                         foreach($filter as $f){
-                            
                             $ids[]=$f['id'];
-                            
-                            
-                            
                         }
                         if(!empty($ids)){
                             $findProject->whereIn('p_status', $ids);
                         }
-    
                     }
-                    
-                    
                 }
-    
             }
             
             if(!empty($sortData)){
@@ -2097,9 +2088,11 @@ class Api_Controller extends Controller
             foreach($tasks as $task){
                 $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
                 $findStatus = TaskStatus::where("id",$task->t_status)->first();
+                $findProject = Projects::where("id", $task->p_id)->value("p_name");
                 $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
                 $success[]=[
                     "p_id"=>$task->p_id,
+                    "p_name"=>$findProject,
                     "task_id"=>$task->id,
                     "task_name"=>$task->task_name,
                     "deadline"=>$task->deadline,
@@ -2127,18 +2120,6 @@ class Api_Controller extends Controller
         }else{
             throw new Exception("Access Denied");
         }        
-
-                
-                
-               
-                    
-                
-                    
-               
-                
-                
-               
-
     }
 
     public function getManagerNotification(){
@@ -2229,17 +2210,35 @@ class Api_Controller extends Controller
         
         $findAssignedTasks->each->delete();
         
-
-        
         $findUser->delete();
 
         $findProjectInFavorite = FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->get();
         
         $findProjectInFavorite->each->delete();
             //FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->delete();
-       
-
         $success="You leave this project";
         return response()->json($success,200);
+    }
+
+    public function countOfMyTasks(){
+        $user=JWTAuth::parseToken()->authenticate();
+
+        $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
+        $findUserasParticipant = ProjectParticipants::where(["user_id" => $user->id, "p_status" => $findProjectStatus['id']])->pluck('id');
+        $findStatus = TaskStatus::where('task_status', 'Active')->pluck('id');
+        $findTasks = null;
+        
+        $findAssignedTask = AssignedTask::whereIn("p_participant_id", $findUserasParticipant)->pluck('task_id');
+        $findTasksQuery = Tasks::whereIn('id', $findAssignedTask)->where('t_status', $findStatus);
+       
+        $findTasks = $findTasksQuery->count();
+        
+        if ($findTasks<0) {
+            return response(0);
+        }else{
+            return response()->json($findTasks, 200);
+        }
+       
+        
     }
 }
