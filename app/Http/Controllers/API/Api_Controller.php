@@ -933,7 +933,7 @@ class Api_Controller extends Controller
                 "sender_name"=>$findSender->name,
                 
                 "message"=>$foum->message,
-                "created_at"=>$foum->created_at
+                "created_at"=>$foum->created_at->format('Y-m-d')
             ];
             
             
