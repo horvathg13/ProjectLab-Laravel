@@ -1008,8 +1008,6 @@ class Api_Controller extends Controller
                         }
                     }
                 }*/
-                
-                
             }
             
             $assignedTasks = AssignedTask::where("p_participant_id",$projects['id'] )->get();
@@ -1041,14 +1039,30 @@ class Api_Controller extends Controller
                             }
                         }
                     }*/
-                    
-                   
-                        
-                    
-                    
                 }
             }
         }
+
+        $findManagedProjects= Projects::where(["p_manager_id"=>$user->id])->pluck('id');
+
+        if($findManagedProjects->isNotEmpty()){
+            
+            $findTasks = Tasks::whereIn("p_id",$findManagedProjects)->get();
+            foreach($findTasks as $task){
+                $findChatMessageByTaskId=ChatMessages::where("p_id", $task['p_id'])->where("task_id", $task['id'])->where("sender_id","!=", $user->id)->get();
+                foreach($findChatMessageByTaskId as $ChatMessage){
+                    $existsInChatView = ChatView::where("chat_id", $ChatMessage['id'])->exists();
+                    if($existsInChatView==false){
+                        $haveUnreadTaskMessages=true;
+                        $Task[]=[
+                            "UnreadTaskMessages_Task_id"=>$ChatMessage['task_id'],
+                            "UnreadTask_Project_id"=>$ChatMessage['p_id']
+                        ];
+                    }
+                }
+            }
+        }
+
         $success=[
             "unreadProjectMessages"=>$haveUnreadProjectMessages,
             "unreadOpenedProjectMessage"=>$haveUnreadOpenedProjectMessages,
