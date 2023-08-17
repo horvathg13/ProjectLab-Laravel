@@ -344,37 +344,72 @@ class Api_Controller extends Controller
             
         }
         $projects = $projectsQuery->get();
+
+        $findAdminRole = Roles::where("role_name","Admin")->pluck("id");
+        $findUserasAdmin = RoleToUser::where(["user_id"=>$user->id, "role_id"=>$findAdminRole])->exists();
         $success =[];
-  
-       
-        foreach($projects as $project){
-            $findManager = User::where("id", $project->p_manager_id)->first();
-            $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
-            $findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
+        if($findUserasAdmin===true){
+            foreach($projects as $project){
+                $findManager = User::where("id", $project->p_manager_id)->first();
+                $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
+                $findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
+                
+                $success[] =[
+                    "project_id" => $project->id,
+                    "manager_id"=>$project->p_manager_id,
+                    "manager" => $findManager->name,
+                    "manager_email"=>$findManager->email,
+                    "name"=>$project->p_name,
+                    "status"=>$findStatus->p_status,
+                    "deadline"=>$project->deadline,
+                    "favorite"=>$findFavorite,
+                ];
+            }
 
-            $success[] =[
-                "project_id" => $project->id,
-                "manager_id"=>$project->p_manager_id,
-                "manager" => $findManager->name,
-                "manager_email"=>$findManager->email,
-                "name"=>$project->p_name,
-                "status"=>$findStatus->p_status,
-                "deadline"=>$project->deadline,
-                "favorite"=>$findFavorite
-            ];
-
-           
-        }
-
-        if(!empty($success)){
-            return response()->json($success,200);
+            if(!empty($success)){
+                return response()->json($success,200);
+            }else{
+                $success=[   
+                    "message"=>"Database error",
+                    "code"=>404,
+                ];
+                return response()->json($success);
+            }
         }else{
-            $success=[   
-                "message"=>"Database error",
-                "code"=>404,
-            ];
-            return response()->json($success);
+            foreach($projects as $project){
+                $findMyProjects = ProjectParticipants::where(["user_id"=>$user->id,"p_id"=>$project->id])->get();
+                $findManager = User::where("id", $project->p_manager_id)->first();
+                $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
+                $findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
+                foreach($findMyProjects as $my){
+                    $success[] =[
+                        "project_id" => $project->id,
+                        "manager_id"=>$project->p_manager_id,
+                        "manager" => $findManager->name,
+                        "manager_email"=>$findManager->email,
+                        "name"=>$project->p_name,
+                        "status"=>$findStatus->p_status,
+                        "deadline"=>$project->deadline,
+                        "favorite"=>$findFavorite,
+                    ];
+                }
+            }
+            if(!empty($success)){
+                return response()->json($success,200);
+            }else{
+                $success=[   
+                    "message"=>"Database error",
+                    "code"=>404,
+                ];
+                return response()->json($success);
+            }
+            
         }
+       
+        
+  
+        
+        
     }
 
     public function getPriorities(){
@@ -738,25 +773,24 @@ class Api_Controller extends Controller
     public function AttachMyself($project_id, $task_id){
         
         $user = JWTAuth::parseToken()->authenticate();
-        
-        
-        $chekId = null;
-        $check = ProjectParticipants::where(["p_id"=> $project_id,
-                                            "user_id"=> $user->id,
-                                            ])->get();
+        $checkUserInProject = ProjectParticipants::where(["p_id"=> $project_id,"user_id"=> $user->id, ])->first();
 
-        if($check->count() > 0){
-           foreach($check as $c){
-            $chekId = $c['id'];
-           }
-           AssignedTask::create([
-                "task_id"=>$task_id,
-                "p_participant_id"=>$chekId
-            ]);
+        if(!empty($checkUserInProject)){
+            $alreadyAssigned = AssignedTask::where(["p_participant_id"=> $checkUserInProject->id,"task_id"=> $task_id])->exists();
+            if($alreadyAssigned===true){
+                throw new Exception("Already attached yourself!");
+            }else{
+                AssignedTask::create([
+                    "task_id"=>$task_id,
+                    "p_participant_id"=>$checkUserInProject->id
+                ]);
+            }
+           
             $success = [
                 "message"=>"Task attach was successfull!",
                 "code"=>200,
             ];
+
         }else{
             $success = [
                 "message"=>"You have no permission to this task!",
@@ -1131,9 +1165,9 @@ class Api_Controller extends Controller
                     "message"=> "You can access!"
                 ];
             }else{
-                $success[]=[
-                    "message"=> "You have no access permission!"
-                ];
+                
+                throw new Exception("You have no access permission!");
+                
             }
         }
 
