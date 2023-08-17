@@ -1936,11 +1936,8 @@ class Api_Controller extends Controller
         if(!empty($success)){
             return response()->json($success,200);
         }else{
-            $success=[   
-                "message"=>"Database error",
-                "code"=>404,
-            ];
-            return response()->json($success);
+            throw new Exception("You have no managed projects!");
+           
         }
     }
 
@@ -2039,15 +2036,10 @@ class Api_Controller extends Controller
                     if(!empty($success)){
                         $ids=[];
                         return response()->json($success,200);
-                    }/*else{
-                        $ids=[];
-                        $success=[   
-                            "message"=>"You have no tasks in this project!",
-                            "haveManagerRole"=>$haveManagerRole,
-                            "code"=>404,
-                        ];
-                        return response()->json($success,404);
-                    }*/
+                    }else{
+                        throw new Exception("You have no managed tasks!");
+                        
+                    }
         }else{
             throw new Exception("Access Denied");
         }
