@@ -2241,4 +2241,33 @@ class Api_Controller extends Controller
        
         
     }
+    public function saveProfileData(Request $request){
+        $user=JWTAuth::parseToken()->authenticate();
+        $name = $request->input('name');
+        $email = $request->input('email');
+
+        $checkUser = User::where('id',$user->id)->exists();
+        if($checkUser===false){
+            throw new Exception('User does not exitst');
+        }else{
+            $updateUser = User::where('id',$user->id);
+            if(!empty($name)){
+                $updateUser->update([
+                    "name"=>$name,
+                ]);
+            }
+
+            if(!empty($email)){
+                $updateUser->update([
+                    "email"=>$email,
+                ]);
+            }
+
+            $success = "Update Successfull";
+            return response()->json($success,200);
+
+        }
+
+         
+    }
 }
