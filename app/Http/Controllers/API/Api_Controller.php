@@ -1164,7 +1164,7 @@ class Api_Controller extends Controller
                     "employee"=> $EmployeeButtons,
                     "message"=> "You can access!"
                 ];
-            }else{
+            }else if($haveAdminRole===false){
                 
                 throw new Exception("You have no access permission!");
                 
