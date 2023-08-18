@@ -208,7 +208,7 @@ class Api_Controller extends Controller
         $validator = Validator::make($request->all(),[
             "p_name" => "required",
             "p_manager_id" => "required",
-            "date"=> "required|date_format:Y.m.d|after_or_equal:today",
+            "date"=> "required|date_format:Y.m.d",
             "p_id"=>"nullable"
            
         ]);
