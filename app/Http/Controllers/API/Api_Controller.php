@@ -447,7 +447,7 @@ class Api_Controller extends Controller
         $validator = Validator::make($request->all(),[
             "task_name" => "required",
             "description" => "nullable",
-            "deadline"=> "required|date_format:Y-m-d|after_or_equal:today",
+            "deadline"=> "required|date_format:Y-m-d",
             "project_id"=> "required",
             "task_priority"=>"required",
             "task_id"=>"nullable"
@@ -967,7 +967,7 @@ class Api_Controller extends Controller
                 "sender_name"=>$findSender->name,
                 
                 "message"=>$foum->message,
-                "created_at"=>$foum->created_at->format('Y-m-d')
+                "created_at"=>$foum->created_at->format('Y-m-d H:i')
             ];
             
             
@@ -2271,6 +2271,17 @@ class Api_Controller extends Controller
         $user=JWTAuth::parseToken()->authenticate();
         $name = $request->input('name');
         $email = $request->input('email');
+
+        $validator = Validator::make($request->all(),[
+            "name"=>"required",
+            "email"=>"required"
+        ]);
+        if ($validator->fails()){
+            $response=[
+                "validatorError"=>$validator->errors()->all(),
+            ];
+            return response()->json($response, 400);
+        }
 
         $checkUser = User::where('id',$user->id)->exists();
         if($checkUser===false){
