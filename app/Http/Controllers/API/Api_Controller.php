@@ -369,11 +369,7 @@ class Api_Controller extends Controller
             if(!empty($success)){
                 return response()->json($success,200);
             }else{
-                $success=[   
-                    "message"=>"Database error",
-                    "code"=>404,
-                ];
-                return response()->json($success);
+               throw new Exception("You have no attached project!");
             }
         }else{
             foreach($projects as $project){
@@ -397,11 +393,7 @@ class Api_Controller extends Controller
             if(!empty($success)){
                 return response()->json($success,200);
             }else{
-                $success=[   
-                    "message"=>"Database error",
-                    "code"=>404,
-                ];
-                return response()->json($success);
+                throw new Exception("You have no attached project!");
             }
             
         }
@@ -480,7 +472,6 @@ class Api_Controller extends Controller
                     "deadline"=>$validator->validated()['deadline'],
                     "description"=>$validator->validated()['description'],
                     "p_id"=>$validator->validated()['project_id'],
-                    "t_status"=>$findTaskStatus['id'],
                     "t_priority"=>$validator->validated()['task_priority'],
 
                 ]);
@@ -1291,7 +1282,7 @@ class Api_Controller extends Controller
         $rules = [
             'ProjectId' => 'required',
             'TaskId' => 'nullable',
-            'StatusId' => 'required',
+            'StatusId' => 'nullable',
             'PriorityId'=>'nullable',
             'SetAllTask'=>'nullable|boolean',
             'SetAllPriority'=>'nullable|boolean'
@@ -1329,7 +1320,7 @@ class Api_Controller extends Controller
         }else{
             
             $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
-            if($SetAllTaskBool===false){
+            if($StatusId !== null && $SetAllTaskBool===false){
                 
                 $findProjectTasks->touch();
                 $findProjectTasks->update([
@@ -1339,10 +1330,10 @@ class Api_Controller extends Controller
                 $success[]=[
                     "message"=>"Update Successfull!",
                 ];
-            }else{
+            }else if($StatusId !== null && $SetAllTaskBool===true){
                 
                 $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                if(empty($findProjectTasks)){
+                if($findProjectTasks->isEmpty()){
                     throw new Exception("Query is empty");
                 }else{
                     foreach($findProjectTasks as $task){
@@ -2053,6 +2044,7 @@ class Api_Controller extends Controller
                     $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
                     $findStatus = TaskStatus::where("id",$task->t_status)->first();
                     $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
+
                     $success[]=[
                         "task_id"=>$task->id,
                         "task_name"=>$task->task_name,
