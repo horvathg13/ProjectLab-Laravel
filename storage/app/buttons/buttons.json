@@ -1,0 +1,136 @@
+{
+    "admin": [
+      {
+        "label": "Bann User",
+        "emit": { "event": "DataSave", "data": null, "str": "BannUser" },
+        "class": "ui small red button item",
+        "icon": "ui close icon",
+        "onclick": "DataSaveEmit"
+      },
+      {
+        "label": "Roles",
+        "emit": { "event": "DataSaveRolesEmit", "data": null, "str": "open_show_role_selector_modal" },
+        "class": "ui small purple button item",
+        "icon": "ui balance scale icon",
+        "onclick": "DataSaveRolesEmit"
+      },
+      {
+        "label": "Reset<br> password",
+        "emit": { "event": "DataSaveResetPassword", "data": null, "str": "PasswordResetManual" },
+        "class": "ui small orange button item",
+        "icon": "ui key icon",
+        "onclick": "DataSaveResetPasswordEmit"
+      },
+      {
+        "label": "Employees",
+        "emit": { "event": "showParticipantModal", "data": null },
+        "class": "ui small green button item",
+        "icon": "ui user plus icon",
+        "onclick": "showParticipantModalEmit"
+      },
+      {
+        "label": "Comments",
+        "emit": { "event": "CommentEmit", "data": null },
+        "class": "ui small blue button item",
+        "icon": { "primary": "ui comments icon", "secoundary": "ui red bell icon" },
+        "onclick": "CommentEmit"
+      },
+      {
+        "label": "Status",
+        "emit": { "event": "showParticipantModal", "data": null, "switching":true },
+        "class": "ui normal red button item",
+        "icon": "exclamation circle icon",
+        "onclick": "SwitchModal"
+      },
+      {
+        "label": "Edit",
+        "emit": { "event": "showParticipantModal", "data": null, "switching":true },
+        "class": "ui normal violet button item",
+        "icon": "edit icon",
+        "onclick": "EditEmit"
+      },
+      {
+        "label": "View Tasks",
+        "emit": { "event": "redirect", "data": null },
+        "class": "ui small orange button item",
+        "icon": "ui tasks icon",
+        "onclick": "redirectEmit"
+      }
+    ],
+
+    "manager": [
+      {
+        "label": "Employees",
+        "emit": { "event": "edit", "data": null},
+        "class": "ui small green button item",
+        "icon": "ui user plus icon",
+        "onclick": "showParticipantModalEmit"
+      },
+      {
+        "label": "Attach To<br> Employee",
+        "emit": { "event": "Attach_Modal", "data": null },
+        "class": "ui normal green button item",
+        "icon": "ui user puls icon",
+        "onclick": "Attach_ModalEmit"
+      },
+      {
+        "label": "Edit",
+        "emit": { "event": "showParticipantModal", "data": null, "switching":true },
+        "class": "ui normal violet button item",
+        "icon": "edit icon",
+        "onclick": "EditEmit"
+      },
+      {
+        "label": "Status",
+        "emit": { "event": "showParticipantModal", "data": null, "switching":true },
+        "class": "ui normal red button item",
+        "icon": "exclamation circle icon",
+        "onclick": "SwitchModal"
+      }
+      
+
+    ],
+    
+    "employee": [
+      {
+        "label": "View Tasks",
+        "emit": { "event": "redirect", "data": null },
+        "class": "ui small orange button item",
+        "icon": "ui tasks icon",
+        "onclick": "redirectEmit"
+      },
+      {
+        "label": "Comments",
+        "emit": { "event": "CommentEmit", "data": null },
+        "class": "ui small blue button item",
+        "icon": { "primary": "ui comments icon", "secoundary": "ui red bell icon" },
+        "onclick": "CommentEmit"
+      },
+      {
+        "label": "Attach To<br> Myself",
+        "emit": { "event": "AttachMyself", "data": null },
+        "class": "ui normal green button item",
+        "icon": "ui user puls icon",
+        "onclick": "AttachMyselfEmit"
+      },
+      {
+        "label":"Completed",
+        "class":"ui small green button item",
+        "icon":"ui check icon",
+        "onclick":"CompletedEmit"
+      },
+      {
+        "label":"Task Details",
+        "class":"ui small orange button item",
+        "icon":"ui tasks icon",
+        "onclick":"TaskDetailsEmit"
+      },
+      {
+        "label":"Leave Project",
+        "class":"ui small red button item",
+        "icon":"ui sign out icon",
+        "onclick":"DataSaveLeaveProjectEmit"
+      }
+    ]
+}
+  
