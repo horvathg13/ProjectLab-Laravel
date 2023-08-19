@@ -55,6 +55,13 @@
         "class": "ui small orange button item",
         "icon": "ui tasks icon",
         "onclick": "redirectEmit"
+      },
+      {
+        "label": "Attach To<br> Employee",
+        "emit": { "event": "Attach_Modal", "data": null },
+        "class": "ui normal green button item",
+        "icon": "ui user puls icon",
+        "onclick": "Attach_ModalEmit"
       }
     ],
 
