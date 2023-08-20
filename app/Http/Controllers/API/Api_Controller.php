@@ -335,7 +335,6 @@ class Api_Controller extends Controller
                     ProjectParticipants::create([
                         "user_id"=>$validator->validated()['p_manager_id'],
                         "p_id"=>$create->id,
-                        "p_status" => $status->id,
                     ]);
 
                     if(!$create){
@@ -921,8 +920,6 @@ class Api_Controller extends Controller
                         ProjectParticipants::create([
                             "user_id"=>$parti['id'],
                             "p_id"=>$project['project_id'],
-                            'p_status'=>$find_status_id->id
-
                         ]);
                     }
                     
@@ -1738,7 +1735,7 @@ class Api_Controller extends Controller
         $success = [];
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
         $findActiveProjects = Projects::where("p_status", $findProjectStatus->id)->pluck('id');
-        $findUserasParticipant = ProjectParticipants::where("user_id",$user->id)->whereIn("p_status",$findActiveProjects)->pluck('id');
+        $findUserasParticipant = ProjectParticipants::where("user_id",$user->id)->whereIn("p_id",$findActiveProjects)->pluck('id');
         
         $findStatus = TaskStatus::whereIn('task_status', ['Active', 'Completed'])->pluck('id');
         $findTasks = null;
@@ -2345,7 +2342,7 @@ class Api_Controller extends Controller
 
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
         $findActiveProjects= Projects::where("p_status", $findProjectStatus->id)->pluck('id');
-        $findUserasParticipant = ProjectParticipants::where("user_id",$user->id)->whereIn("p_status",$findActiveProjects)->pluck('id');
+        $findUserasParticipant = ProjectParticipants::where("user_id",$user->id)->whereIn("p_id",$findActiveProjects)->pluck('id');
         $findStatus = TaskStatus::where('task_status', 'Active')->pluck('id');
         $findTasks = null;
         
