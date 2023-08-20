@@ -63,6 +63,45 @@ class Api_Controller extends Controller
                 "roles" => $roleNames,
             ];
         }
+        
+
+        if(!empty($success)){
+            return response()->json($success,200);
+        }else{
+            $success=[   
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($success);
+        }
+    }
+    public function getManagers(){
+        $users = User::where("status", "active")->get();
+        
+        $globalRoles=[];
+        $success=[];    
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $roleNames = $roles->pluck('role_name');
+
+            $globalRoles[] = [
+                "id" => $user->id,
+                "name" => $user->name,
+                "email" => $user->email,
+                "roles" => $roleNames,
+            ];
+        }
+        //var_dump($globalRoles);
+        foreach($globalRoles as $global){
+            if($global['roles']->contains('Manager') ){
+                $success[]=[
+                    "id"=>$global['id'],
+                    "name"=>$global['name'],
+                    "email"=>$global['email'],
+                    "roles"=>$global['roles'],
+                ];
+            }
+        }
 
         if(!empty($success)){
             return response()->json($success,200);
