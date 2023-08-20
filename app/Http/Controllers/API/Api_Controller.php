@@ -187,15 +187,16 @@ class Api_Controller extends Controller
 
         $haveAdminRole = in_array("Admin",$getGlobalRoles);
         if($haveAdminRole==true){
-            $role = $request->input('role_id');
+            $selectedRoles = $request->input('selectedRole');
             $id = $request->input('user_id');
+            $remove= $request->input('remove');
 
             $data=[
-                "role_id"=>$role,
+                "selectedRole"=>$selectedRoles,
                 "user_id"=>$id
             ];
             $rules=[
-                "role_id"=>"required",
+                "selectedRole"=>"nullable",
                 "user_id"=>"required",
             ];
             $validator = Validator::make($data, $rules);
@@ -204,7 +205,9 @@ class Api_Controller extends Controller
             if ($validator->fails()) {
                 throw new ValidationException($validator);
             }
-
+            if(empty($selectedRoles) && empty($remove)){
+                throw new Exception("Opration canceld!");
+            }
             $findUser = User::find($id);
 
 
@@ -215,27 +218,43 @@ class Api_Controller extends Controller
                 ];
                 return response()->json($success);
             }
+            $success=[];
+            if(count($selectedRoles)>0){
+                foreach($selectedRoles as $selected){
+                    $findUserRoles=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$selected['id']])->exists();
+                    if($findUserRoles===false){
+                        $credentials=[
+                            'user_id' => $findUser->id,
+                            'role_id' => $selected['id']
+                        ];
 
-            $findUserRoles=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$role])->exists();
-            if($findUserRoles===false){
-                $credentials=[
-                    'user_id' => $findUser->id,
-                    'role_id' => $role
-                ];
+                        $role= RoleToUser::create($credentials);
+                        
 
-                $role= RoleToUser::create($credentials);
-                
-
-                
-                $success=[   
-                    "message"=>"Thats it!",
-                    "code"=>200,
+                        
+                        $success[]=[   
+                            "message"=>"Thats it!",
+                            "code"=>200,
+                        ];
+                        
+                    }else{
+                        throw new Exception("Role already attached to user!");
+                    }
+                }
+            }
+            
+            if(count($remove)>0){
+                foreach($remove as $r){
+                    $findRoleId=Roles::where("role_name",$r['name'])->first();
+                    $removeRole=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$findRoleId->id])->delete();
+                }
+                $success=[
+                    'message'=>"Operation Completed!"
                 ];
                 return response()->json($success);
-            }else{
-                throw new Exception("Role already attached to user!");
             }
-           
+            return response()->json($success);
+            
         }else{
             throw new Exception("You do not have the correct role for this operation!");
         }
