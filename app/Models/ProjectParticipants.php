@@ -14,7 +14,7 @@ class ProjectParticipants extends Model
     protected $fillable = [
         'user_id',
         'p_id',
-        'p_status',
+        
         
     ];
 
