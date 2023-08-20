@@ -19,8 +19,6 @@ class ProjectParticipantsTable extends Migration
             $table->foreign("user_id")->references("id")->on("users");
             $table->unsignedBigInteger("p_id");
             $table->foreign("p_id")->references("id")->on("projects");
-            $table->unsignedBigInteger("p_status");
-            $table->foreign("p_status")->references("id")->on("projects_status");
             $table->timestamps();
         });
     }
