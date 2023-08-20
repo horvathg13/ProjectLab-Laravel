@@ -908,6 +908,9 @@ class Api_Controller extends Controller
             $participants = $request->input('participants');
             $project = $validator->validated()['project'];
             $remove = $request->input('remove');
+            if(empty($participants) && empty($remove)){
+                throw new Exception("Operation canceld!");
+            }
             if(!empty($participants)){
                 foreach($participants as $parti){
                     $findParticipants= ProjectParticipants::where(["user_id"=>$parti['id'], "p_id"=>$project['project_id']])->exists();
@@ -1581,8 +1584,8 @@ class Api_Controller extends Controller
         $success = [];
         $urgentDay = date("Y-m-d", strtotime("+5 days"));
         $findActive=ProjectsStatus::where("p_status","Active")->first();
-        
-        $findMyProjects = ProjectParticipants::where(['user_id'=>$user->id, "p_status"=>$findActive['id']])->get();
+        $findActiveProjects=Projects::where("p_status",$findActive->id)->pluck('id');
+        $findMyProjects = ProjectParticipants::where('user_id',$user->id)->whereIn("p_id",$findActiveProjects)->get();
 
         foreach($findMyProjects as $myp){
             $findChatMessages=ChatMessages::where(['p_id'=>$myp['p_id'], 'task_id'=>null])->where('sender_id', '!=', $user->id)->get();
@@ -1730,16 +1733,18 @@ class Api_Controller extends Controller
 
         $jwt = JWTAuth::parseToken();
         $user = $jwt->authenticate();
-
         $sortData = $request->input('sortData');
         
         $success = [];
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
-        $findUserasParticipant = ProjectParticipants::where(["user_id" => $user->id, "p_status" => $findProjectStatus['id']])->pluck('id');
+        $findActiveProjects = Projects::where("p_status", $findProjectStatus->id)->pluck('id');
+        $findUserasParticipant = ProjectParticipants::where("user_id",$user->id)->whereIn("p_status",$findActiveProjects)->pluck('id');
+        
         $findStatus = TaskStatus::whereIn('task_status', ['Active', 'Completed'])->pluck('id');
         $findTasks = null;
         
         $findAssignedTask = AssignedTask::whereIn("p_participant_id", $findUserasParticipant)->pluck('task_id');
+        
         $findTasksQuery = Tasks::whereIn('id', $findAssignedTask)->whereIn('t_status', $findStatus);
             
 
@@ -1751,7 +1756,6 @@ class Api_Controller extends Controller
 
         $findTasks = $findTasksQuery->get();
         
-    
         foreach ($findTasks as $task) {
             $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
             $findProjectname = Projects::where("id", $task->p_id)->first();
@@ -2340,7 +2344,8 @@ class Api_Controller extends Controller
         $user=JWTAuth::parseToken()->authenticate();
 
         $findProjectStatus = ProjectsStatus::where("p_status", "Active")->first();
-        $findUserasParticipant = ProjectParticipants::where(["user_id" => $user->id, "p_status" => $findProjectStatus['id']])->pluck('id');
+        $findActiveProjects= Projects::where("p_status", $findProjectStatus->id)->pluck('id');
+        $findUserasParticipant = ProjectParticipants::where("user_id",$user->id)->whereIn("p_status",$findActiveProjects)->pluck('id');
         $findStatus = TaskStatus::where('task_status', 'Active')->pluck('id');
         $findTasks = null;
         
