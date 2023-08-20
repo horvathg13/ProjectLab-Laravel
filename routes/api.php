@@ -68,3 +68,4 @@ Route::post("accept-all-task",[App\Http\Controllers\API\Api_Controller::class, "
 Route::post("leave-project",[App\Http\Controllers\API\Api_Controller::class, "leaveProject"]);
 Route::post("count-of-my-active-tasks",[App\Http\Controllers\API\Api_Controller::class, "countOfMyTasks"]);
 Route::post("save-profile-data",[App\Http\Controllers\API\Api_Controller::class, "saveProfileData"]);
+Route::post("getManagers",[App\Http\Controllers\API\Api_Controller::class, "getManagers"]);
