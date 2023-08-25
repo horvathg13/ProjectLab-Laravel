@@ -22,13 +22,12 @@ class RegisterController extends Controller
             "name" => "required",
             "email" => "required|email",
             "password" => "required",
-            "c_password" => "required|same:password"
+            "confirm_password" => "required|same:password"
         ]);
 
         if ($validator->fails()){
             $response=[
-                "success" => false,
-                "message"=> $validator->errors()
+                "validatorError"=> $validator->errors()->all()
             ];
             return response()->json($response, 422);
         }
