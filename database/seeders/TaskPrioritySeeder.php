@@ -15,13 +15,13 @@ class TaskPrioritySeeder extends Seeder
     public function run()
     {
         TaskPriorities::create([
-            "task_priority" => "High",
+            "task_priority" => "Low",
         ]);
         TaskPriorities::create([
             "task_priority" => "Medium",
         ]);
         TaskPriorities::create([
-            "task_priority" => "Low",
+            "task_priority" => "High",
         ]);
        
     }
