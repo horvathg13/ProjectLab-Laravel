@@ -111,7 +111,7 @@ class RegisterController extends Controller
         PasswordResets::create($cresendals);
         
         $success=[
-            "url" =>url('reset-password/'.$token),
+            "url" =>env("FRONTEND_URL").'/reset-password/'.$token,
             "name" => $name,
             "email" => $email,
         ];
