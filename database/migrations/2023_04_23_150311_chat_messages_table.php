@@ -21,8 +21,6 @@ class ChatMessagesTable extends Migration
             $table->foreign("task_id")->references("id")->on("tasks");
             $table->unsignedBigInteger("sender_id");
             $table->foreign("sender_id")->references("id")->on("users");
-            $table->unsignedBigInteger("receiver_id");
-            $table->foreign("receiver_id")->references("id")->on("users");
             $table->text("message");
             $table->timestamps();
         });
