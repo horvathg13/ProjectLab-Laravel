@@ -748,6 +748,8 @@ class Api_Controller extends Controller
                 $success=[   
                     "message"=>"You have no tasks in this project!",
                     "haveManagerRole"=>$haveManagerRole,
+                    "haveAdminRole"=>$$haveAdminRole,
+                    "haveParticipantRole"=>$haveParticipantRole,
                     "code"=>404,
                 ];
                 return response()->json($success,404);
