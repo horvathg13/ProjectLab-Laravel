@@ -19,19 +19,19 @@ class UserSeeder extends Seeder
         [
             "name"=>"admin",
             "email"=>"admin@projectlab.hu",
-            "password"=>Hash::make("admin"),
+            "password"=>bcrypt("admin"),
             "status"=>"active",
         ]);
         User::create([
             "name"=>"manager",
             "email"=>"manager@projectlab.hu",
-            "password"=>Hash::make("manager"),
+            "password"=>bcrypt("manager"),
             "status"=>"active",
         ]);
         User::create([
             "name"=>"employee",
             "email"=>"employee@projectlab.hu",
-            "password"=>Hash::make("employee"),
+            "password"=>bcrypt("employee"),
             "status"=>"active",
         ]);
         
