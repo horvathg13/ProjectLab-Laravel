@@ -14,9 +14,7 @@ class TaskStatusSeeder extends Seeder
      */
     public function run()
     {
-        TaskStatus::create([
-            "task_status" => "Under Review",
-        ]);
+        
         TaskStatus::create([
             "task_status" => "Suspended",
         ]);
