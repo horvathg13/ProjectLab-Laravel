@@ -763,8 +763,9 @@ class Api_Controller extends Controller
 
         foreach($projectParticipants as $p){
             $findUser = User::where("id", $p->user_id)->first();
-            $findStatus = ProjectsStatus::where("id",$p->p_status)->first();
             $findProjectname = Projects::where("id", $p->p_id)->first();
+            $findStatus = ProjectsStatus::where("id",$findProjectname->p_status)->first();
+            
 
             $success[]=[
                 "id"=>$p->id,
