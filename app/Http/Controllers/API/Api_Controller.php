@@ -748,7 +748,7 @@ class Api_Controller extends Controller
                 $success=[   
                     "message"=>"You have no tasks in this project!",
                     "haveManagerRole"=>$haveManagerRole,
-                    "haveAdminRole"=>$$haveAdminRole,
+                    "haveAdminRole"=>$haveAdminRole ?? false,
                     "haveParticipantRole"=>$haveParticipantRole,
                     "code"=>404,
                 ];
