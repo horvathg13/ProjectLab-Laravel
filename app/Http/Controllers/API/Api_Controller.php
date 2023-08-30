@@ -304,6 +304,13 @@ class Api_Controller extends Controller
                         "p_status" => $status->id
 
                         ]);
+                        $checkManagerIsParticipant= ProjectParticipants::where(["user_id"=>$request->input('p_manager_id'), "p_id"=>$request->input('p_id')])->exists();
+                        if($checkManagerIsParticipant === false){
+                            ProjectParticipants::create([
+                                "user_id"=>$request->input('p_manager_id'),
+                                "p_id"=>$request->input('p_id'),
+                            ]);
+                        }
                         $success=[
                             "message"=>"Update Successfull",
                             "data"=>$update,
@@ -937,19 +944,20 @@ class Api_Controller extends Controller
             if(!empty($remove)){
                 
                 foreach($remove as $r){
-                    $findParticipantId = ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->first();
-                    
-                    if(empty($findParticipantId)){
+                    #$r['id'] === ProjectParticipants->id
+                    $findManagerInParticipants= ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->first();
+                    if(empty($findManagerInParticipants)){
                         throw new Exception("Datasbase error: User does not found!");
-                    
                     }else{
-                        $findTasks = Tasks::where("p_id",$project['project_id'])->pluck('id');
-                        AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->delete();
-                        ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->delete();
-                        
-                            
-                        
-                    }    
+                        $findAsManager= Projects::where(["p_manager_id"=> $findManagerInParticipants->user_id, "id"=>$project['project_id']])->exists();
+                        if($findAsManager === true){
+                            throw new Exception("You can not remove the project manager");
+                        }else{
+                            $findTasks = Tasks::where("p_id",$project['project_id'])->pluck('id');
+                            AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->delete();
+                            ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->delete();
+                        }
+                    }
                 }
                 $success=[
                     "message"=>"Thats it!",
@@ -2401,5 +2409,23 @@ class Api_Controller extends Controller
         }
 
          
+    }
+
+    public function AccessControllForTasks(Request $request){
+        $user= JWTAuth::parseToken()->authenticate();
+        $ProjectId = $request->input("p_id");
+        $findUserasParticipant=ProjectParticipants::where(["user_id"=> $user->id, "p_id"=>$ProjectId])->exists();
+        $getGlobalRoles=[];
+       
+        $roles = $user->roles()->get();
+        foreach($roles as $r){
+            $globalRoles= $roles->pluck('role_name');
+        }
+        $haveAdminRole = $globalRoles->contains('Admin');
+        if($findUserasParticipant === false && $haveAdminRole === false){
+            throw new Exception("Access Denied");
+        }else{
+            return response(200);
+        }
     }
 }
