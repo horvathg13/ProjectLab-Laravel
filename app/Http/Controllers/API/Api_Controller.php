@@ -647,7 +647,10 @@ class Api_Controller extends Controller
         $sortData = $request->input('sortData');
         $filterData = $request->input('filterData');
         
-
+        $accessControll=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$id])->exists();
+        if($accessControll === false){
+            throw new Exception("Access Denied");
+        }
 
         $data = [
             'projectId' => $id,
@@ -2331,8 +2334,13 @@ class Api_Controller extends Controller
         $user=JWTAuth::parseToken()->authenticate();
 
         $projectId = $request->input('projectId');
-        var_dump($projectId);
+        
         $findUser=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$projectId])->first();
+
+        $findUserAsManager=Projects::where(["id"=>$projectId, "p_manager_id"=>$user->id])->exists();
+        if($findUserAsManager === true){
+            throw new Exception("The manager can not leave the project");
+        }
         
         $findAssignedTasks=AssignedTask::where("p_participant_id",$findUser['id'])->get();
         
@@ -2415,7 +2423,7 @@ class Api_Controller extends Controller
         $user= JWTAuth::parseToken()->authenticate();
         $ProjectId = $request->input("p_id");
         $findUserasParticipant=ProjectParticipants::where(["user_id"=> $user->id, "p_id"=>$ProjectId])->exists();
-        $getGlobalRoles=[];
+        $globalRoles=[];
        
         $roles = $user->roles()->get();
         foreach($roles as $r){
