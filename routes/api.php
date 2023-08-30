@@ -70,3 +70,4 @@ Route::post("count-of-my-active-tasks",[App\Http\Controllers\API\Api_Controller:
 Route::post("save-profile-data",[App\Http\Controllers\API\Api_Controller::class, "saveProfileData"]);
 Route::post("getManagers",[App\Http\Controllers\API\Api_Controller::class, "getManagers"]);
 Route::post("acessControllForTasks",[App\Http\Controllers\API\Api_Controller::class, "AccessControllForTasks"]);
+Route::post("getEmployees",[App\Http\Controllers\API\Api_Controller::class, "getEmployees"]);

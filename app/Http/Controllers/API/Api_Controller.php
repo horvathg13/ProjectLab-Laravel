@@ -113,7 +113,45 @@ class Api_Controller extends Controller
             return response()->json($success);
         }
     }
+    public function getEmployees(Request $request){
+        $users = User::where("status", "active")->get();
+        $projectId = $request->input('projectId');
+        $globalRoles=[];
+        $allEmployee=[];
+        $success=[];    
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $roleNames = $roles->pluck('role_name');
 
+            $globalRoles[] = [
+                "id" => $user->id,
+                "name" => $user->name,
+                "email" => $user->email,
+                "roles" => $roleNames,
+            ];
+        }
+        //var_dump($globalRoles);
+        foreach($globalRoles as $global){
+            if($global['roles']->contains('Employee') ){
+                $allEmployee[]=[
+                    "id"=>$global['id'],
+                    "name"=>$global['name'],
+                    "email"=>$global['email'],
+                    "roles"=>$global['roles'],
+                ];
+            }
+        }
+       
+        if(!empty($allEmployee)){
+            return response()->json($allEmployee,200);
+        }else{
+            $fail=[   
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($fail);
+        }
+    }
     /*public function createRole(Request $request){
 
         $validator = Validator::make($request->all(),[
@@ -263,14 +301,25 @@ class Api_Controller extends Controller
 
     public function createProject(Request $request){
         $user=JWTAuth::parseToken()->authenticate();
-       
-        $validator = Validator::make($request->all(),[
-            "p_name" => "required",
-            "p_manager_id" => "required",
-            "date"=> "required|date_format:Y.m.d",
-            "p_id"=>"nullable"
-           
-        ]);
+        $project_name = $request->input('project_name');
+        $managerId= $request->input('manager_id');
+        $date=$request->input('date');
+        $project_id= $request->input('project_id');
+
+        $data=[
+            "project_name"=>$project_name,
+            "manager"=>$managerId,
+            "deadline"=>$date,
+            "projectId"=>$$project_id
+
+        ];
+        $rules=[
+            "project_name"=>"required",
+            "manager"=>"required",
+            "deadline"=> "required|date_format:Y.m.d",
+            "projectId"=>"nullable"
+        ];
+        $validator = Validator::make($data, $rules);
 
         if ($validator->fails()){
             $response=[
@@ -648,7 +697,15 @@ class Api_Controller extends Controller
         $filterData = $request->input('filterData');
         
         $accessControll=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$id])->exists();
-        if($accessControll === false){
+        $globalRoles=[];
+        $users = User::where("id", $user->id)->get();
+        foreach($users as $user){
+            $roles = $user->roles()->get();
+            $globalRoles = $roles->pluck('role_name');
+        }
+        $haveAdminRole = $globalRoles->contains('Admin');
+
+        if($accessControll === false && $haveAdminRole === false){
             throw new Exception("Access Denied");
         }
 
@@ -672,20 +729,6 @@ class Api_Controller extends Controller
         }
 
         $haveManagerRole=Projects::where(["p_manager_id"=>$user->id, "id"=>$id])->exists();
-
-        $getGlobalRoles=[];
-        $users = User::where("id", $user->id)->get();
-        foreach($users as $user){
-            $roles = $user->roles()->get();
-            $globalRoles = $roles->pluck('role_name');
-
-            
-            $getGlobalRoles[] = [
-               "roles" => $globalRoles,
-            ];
-        }
-
-        $haveAdminRole = $globalRoles->contains('Admin');
         $haveParticipantRole = false;
 
 
@@ -1043,7 +1086,7 @@ class Api_Controller extends Controller
                 return response()->json($success);
             }
         }else{
-            throw new Exception("Undefined data sent");
+            throw new Exception("Operation canceld");
                
         }
        
@@ -2242,7 +2285,7 @@ class Api_Controller extends Controller
             }else{
                 
                 $success=[   
-                    "message"=>"You have no completed task",
+                    "message"=>"You have no tasks to be approved",
                     "haveManagerRole"=>$haveManagerRole,
                     "code"=>404,
                 ];
