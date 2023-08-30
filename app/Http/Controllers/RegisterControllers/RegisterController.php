@@ -85,8 +85,7 @@ class RegisterController extends Controller
 
         if ($validator->fails()){
             $response=[
-                "success" => false,
-                "message"=> $validator->errors()
+                "validatorError"=>$validator->errors()->all(),
             ];
             return response()->json($response, 400);
         }
@@ -160,7 +159,7 @@ class RegisterController extends Controller
         $validator = Validator::make($request->all(),[
             "email" => "required|email",
             "password" => "required",
-            "c_password" => "required|same:password"
+            "confirm_password" => "required|same:password"
         ]);
 
         if ($validator->fails()){
