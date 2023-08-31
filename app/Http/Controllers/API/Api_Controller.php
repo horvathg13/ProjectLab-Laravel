@@ -310,7 +310,7 @@ class Api_Controller extends Controller
             "project_name"=>$project_name,
             "manager"=>$managerId,
             "deadline"=>$date,
-            "projectId"=>$$project_id
+            "projectId"=>$project_id
 
         ];
         $rules=[
