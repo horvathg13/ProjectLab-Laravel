@@ -425,10 +425,11 @@ class Api_Controller extends Controller
         /*$today=now();
         $projects = Projects::where("deadline", ">=", $today)->get();*/
         $user=JWTAuth::parseToken()->authenticate();
+
         $sortData = $request->input('sortData');
         $filterData = $request->input('filterData');
         
-
+        
 
         $data = [
             'sortData' => $sortData,
@@ -504,7 +505,7 @@ class Api_Controller extends Controller
             if(!empty($success)){
                 return response()->json($success,200);
             }else{
-               throw new Exception("You have no attached project!");
+                return;
             }
         }else{
             foreach($projects as $project){
