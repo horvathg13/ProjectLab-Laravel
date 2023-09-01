@@ -338,22 +338,22 @@ class Api_Controller extends Controller
         $haveAdminRole = in_array("Admin",$getGlobalRoles);
         $haveManagerRole=in_array("Manager",$getGlobalRoles);
         if($haveAdminRole===true || $haveManagerRole === true){
-            if($validator->validated()['p_id'] != 0){
-                $findProject = Projects::where(["id"=>$validator->validated()['p_id']])->first();
+            if(!empty($project_id)){
+                $findProject = Projects::where(["id"=>$project_id])->first();
                 if($findProject != null){
                     $status = ProjectsStatus::where("p_status", "Active")->first();
                     $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
                     $findManagerRoleId = Roles::where("role_name", "Manager")->first();
-                    $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$validator->validated()['p_manager_id']])->exists();
+                    $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$managerId])->exists();
                     if($findManagerGlobalRole==true){
                         $update= $findProject->update([
-                        "p_name" => $validator->validated()['p_name'],
-                        "p_manager_id" => $validator->validated()['p_manager_id'],
+                        "p_name" => $project_name,
+                        "p_manager_id" => $managerId,
                         "deadline" => $formattedDate,
                         "p_status" => $status->id
 
                         ]);
-                        $checkManagerIsParticipant= ProjectParticipants::where(["user_id"=>$request->input('p_manager_id'), "p_id"=>$request->input('p_id')])->exists();
+                        $checkManagerIsParticipant= ProjectParticipants::where(["user_id"=>$managerId, "p_id"=>$project_id])->exists();
                         if($checkManagerIsParticipant === false){
                             ProjectParticipants::create([
                                 "user_id"=>$request->input('p_manager_id'),
@@ -373,15 +373,15 @@ class Api_Controller extends Controller
                 }   
             }else{
                 $findManagerRoleId = Roles::where("role_name", "Manager")->first();
-                $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$validator->validated()['p_manager_id']])->exists();
+                $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$managerId])->exists();
                 if($findManagerGlobalRole===true){
                     $status = ProjectsStatus::where("p_status", "Active")->first();
                     
                     $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
 
                     $credentials=[
-                        "p_name" => $validator->validated()['p_name'],
-                        "p_manager_id" => $validator->validated()['p_manager_id'],
+                        "p_name" => $project_name,
+                        "p_manager_id" => $managerId,
                         "deadline" => $formattedDate,
                         "p_status" => $status->id
                     ];
@@ -389,7 +389,7 @@ class Api_Controller extends Controller
                     $create = Projects::create($credentials);
 
                     ProjectParticipants::create([
-                        "user_id"=>$validator->validated()['p_manager_id'],
+                        "user_id"=>$managerId,
                         "p_id"=>$create->id,
                     ]);
 
