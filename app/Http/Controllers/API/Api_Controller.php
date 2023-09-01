@@ -212,212 +212,215 @@ class Api_Controller extends Controller
     }
 
     public function userToRole(Request $request){
-        $checkUser=JWTAuth::parseToken()->authenticate();
-        $getGlobalRoles=[];
-        $users = User::where("id", $checkUser->id)->first();
+        return DB::transaction(function() use(&$request){
         
-        $roles = $users->roles()->get();
-        foreach($roles as $role){
-            $getGlobalRoles[] = $role->role_name;
-               
+            $checkUser=JWTAuth::parseToken()->authenticate();
+            $getGlobalRoles=[];
+            $users = User::where("id", $checkUser->id)->first();
             
-        }
-
-        $haveAdminRole = in_array("Admin",$getGlobalRoles);
-        if($haveAdminRole==true){
-            $selectedRoles = $request->input('selectedRole');
-            $id = $request->input('user_id');
-            $remove= $request->input('remove');
-
-            $data=[
-                "selectedRole"=>$selectedRoles,
-                "user_id"=>$id
-            ];
-            $rules=[
-                "selectedRole"=>"nullable",
-                "user_id"=>"required",
-            ];
-            $validator = Validator::make($data, $rules);
-        
-    
-            if ($validator->fails()) {
-                throw new ValidationException($validator);
+            $roles = $users->roles()->get();
+            foreach($roles as $role){
+                $getGlobalRoles[] = $role->role_name;
+                
+                
             }
-            if(empty($selectedRoles) && empty($remove)){
-                throw new Exception("Opration canceld!");
-            }
-            $findUser = User::find($id);
 
+            $haveAdminRole = in_array("Admin",$getGlobalRoles);
+            if($haveAdminRole==true){
+                $selectedRoles = $request->input('selectedRole');
+                $id = $request->input('user_id');
+                $remove= $request->input('remove');
 
-            if (!$findUser){
-                $success=[   
-                    "message"=>"Invalid User",
-                    "code"=>404,
+                $data=[
+                    "selectedRole"=>$selectedRoles,
+                    "user_id"=>$id
                 ];
-                return response()->json($success);
-            }
-            $success=[];
-            if(count($selectedRoles)>0){
-                foreach($selectedRoles as $selected){
-                    $findUserRoles=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$selected['id']])->exists();
-                    if($findUserRoles===false){
-                        $credentials=[
-                            'user_id' => $findUser->id,
-                            'role_id' => $selected['id']
-                        ];
+                $rules=[
+                    "selectedRole"=>"nullable",
+                    "user_id"=>"required",
+                ];
+                $validator = Validator::make($data, $rules);
+            
+        
+                if ($validator->fails()) {
+                    throw new ValidationException($validator);
+                }
+                if(empty($selectedRoles) && empty($remove)){
+                    throw new Exception("Opration canceld!");
+                }
+                $findUser = User::find($id);
 
-                        $role= RoleToUser::create($credentials);
-                        
 
-                        
-                        $success[]=[   
-                            "message"=>"Thats it!",
-                            "code"=>200,
-                        ];
-                        
-                    }else{
-                        throw new Exception("Role already attached to user!");
+                if (!$findUser){
+                    $success=[   
+                        "message"=>"Invalid User",
+                        "code"=>404,
+                    ];
+                    return response()->json($success);
+                }
+                $success=[];
+                if(count($selectedRoles)>0){
+                    foreach($selectedRoles as $selected){
+                        $findUserRoles=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$selected['id']])->exists();
+                        if($findUserRoles===false){
+                            $credentials=[
+                                'user_id' => $findUser->id,
+                                'role_id' => $selected['id']
+                            ];
+
+                            $role= RoleToUser::create($credentials);
+                            
+
+                            
+                            $success[]=[   
+                                "message"=>"Thats it!",
+                                "code"=>200,
+                            ];
+                            
+                        }else{
+                            throw new Exception("Role already attached to user!");
+                        }
                     }
                 }
-            }
-            
-            if(count($remove)>0){
-                foreach($remove as $r){
-                    $findRoleId=Roles::where("role_name",$r['name'])->first();
-                    $removeRole=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$findRoleId->id])->delete();
+                
+                if(count($remove)>0){
+                    foreach($remove as $r){
+                        $findRoleId=Roles::where("role_name",$r['name'])->first();
+                        $removeRole=RoleToUser::where(["user_id"=>$findUser->id, "role_id"=>$findRoleId->id])->delete();
+                    }
+                    $success=[
+                        'message'=>"Operation Completed!"
+                    ];
+                    return response()->json($success);
                 }
-                $success=[
-                    'message'=>"Operation Completed!"
-                ];
                 return response()->json($success);
+                
+            }else{
+                throw new Exception("You do not have the correct role for this operation!");
             }
-            return response()->json($success);
-            
-        }else{
-            throw new Exception("You do not have the correct role for this operation!");
-        }
-        
+        });
     }
 
     public function createProject(Request $request){
-        $user=JWTAuth::parseToken()->authenticate();
-        $project_name = $request->input('project_name');
-        $managerId= $request->input('manager_id');
-        $date=$request->input('date');
-        $project_id= $request->input('project_id');
+        return DB::transaction(function() use(&$request){
+            $user=JWTAuth::parseToken()->authenticate();
+            $project_name = $request->input('project_name');
+            $managerId= $request->input('manager_id');
+            $date=$request->input('date');
+            $project_id= $request->input('project_id');
 
-        $data=[
-            "project_name"=>$project_name,
-            "manager"=>$managerId,
-            "deadline"=>$date,
-            "projectId"=>$project_id
+            $data=[
+                "project_name"=>$project_name,
+                "manager"=>$managerId,
+                "deadline"=>$date,
+                "projectId"=>$project_id
 
-        ];
-        $rules=[
-            "project_name"=>"required",
-            "manager"=>"required",
-            "deadline"=> "required|date_format:Y.m.d",
-            "projectId"=>"nullable"
-        ];
-        $validator = Validator::make($data, $rules);
-
-        if ($validator->fails()){
-            $response=[
-                "validatorError"=>$validator->errors()->all(),
             ];
-            return response()->json($response, 400);
-        }
+            $rules=[
+                "project_name"=>"required",
+                "manager"=>"required",
+                "deadline"=> "required|date_format:Y.m.d",
+                "projectId"=>"nullable"
+            ];
+            $validator = Validator::make($data, $rules);
 
-        $getGlobalRoles=[];
-        
-        $roles = $user->roles()->get();
-        foreach($roles as $role){
-            $getGlobalRoles[] = $role->role_name;
-        }
+            if ($validator->fails()){
+                $response=[
+                    "validatorError"=>$validator->errors()->all(),
+                ];
+                return response()->json($response, 400);
+            }
 
-        $haveAdminRole = in_array("Admin",$getGlobalRoles);
-        $haveManagerRole=in_array("Manager",$getGlobalRoles);
-        if($haveAdminRole===true || $haveManagerRole === true){
-            if(!empty($project_id)){
-                $findProject = Projects::where(["id"=>$project_id])->first();
-                if($findProject != null){
-                    $status = ProjectsStatus::where("p_status", "Active")->first();
-                    $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
+            $getGlobalRoles=[];
+            
+            $roles = $user->roles()->get();
+            foreach($roles as $role){
+                $getGlobalRoles[] = $role->role_name;
+            }
+
+            $haveAdminRole = in_array("Admin",$getGlobalRoles);
+            $haveManagerRole=in_array("Manager",$getGlobalRoles);
+            if($haveAdminRole===true || $haveManagerRole === true){
+                if(!empty($project_id)){
+                    $findProject = Projects::where(["id"=>$project_id])->first();
+                    if($findProject != null){
+                        $status = ProjectsStatus::where("p_status", "Active")->first();
+                        $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
+                        $findManagerRoleId = Roles::where("role_name", "Manager")->first();
+                        $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$managerId])->exists();
+                        if($findManagerGlobalRole==true){
+                            $update= $findProject->update([
+                            "p_name" => $project_name,
+                            "p_manager_id" => $managerId,
+                            "deadline" => $formattedDate,
+                            "p_status" => $status->id
+
+                            ]);
+                            $checkManagerIsParticipant= ProjectParticipants::where(["user_id"=>$managerId, "p_id"=>$project_id])->exists();
+                            if($checkManagerIsParticipant === false){
+                                ProjectParticipants::create([
+                                    "user_id"=>$managerId,
+                                    "p_id"=>$project_id,
+                                ]);
+                            }
+                            $success=[
+                                "message"=>"Update Successfull",
+                                "data"=>$update,
+                            ];
+
+                            return response()->json($success);
+                        }else{
+                            throw new Exception("User has no manager role in the system!");
+                        }
+                    
+                    }   
+                }else{
                     $findManagerRoleId = Roles::where("role_name", "Manager")->first();
                     $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$managerId])->exists();
-                    if($findManagerGlobalRole==true){
-                        $update= $findProject->update([
-                        "p_name" => $project_name,
-                        "p_manager_id" => $managerId,
-                        "deadline" => $formattedDate,
-                        "p_status" => $status->id
+                    if($findManagerGlobalRole===true){
+                        $status = ProjectsStatus::where("p_status", "Active")->first();
+                        
+                        $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
 
-                        ]);
-                        $checkManagerIsParticipant= ProjectParticipants::where(["user_id"=>$managerId, "p_id"=>$project_id])->exists();
-                        if($checkManagerIsParticipant === false){
-                            ProjectParticipants::create([
-                                "user_id"=>$request->input('p_manager_id'),
-                                "p_id"=>$request->input('p_id'),
-                            ]);
-                        }
-                        $success=[
-                            "message"=>"Update Successfull",
-                            "data"=>$update,
+                        $credentials=[
+                            "p_name" => $project_name,
+                            "p_manager_id" => $managerId,
+                            "deadline" => $formattedDate,
+                            "p_status" => $status->id
                         ];
 
-                        return response()->json($success);
+                        $create = Projects::create($credentials);
+
+                        ProjectParticipants::create([
+                            "user_id"=>$managerId,
+                            "p_id"=>$create->id,
+                        ]);
+
+                        if(!$create){
+                            $success=[   
+                                "message"=>"Fail under create project",
+                                "code"=>404,
+                            ];
+                            return response()->json($success);
+                        }else{
+                            $success=[   
+                                "message"=>"Thats it!",
+                                "code"=>200,
+                                "date"=>$formattedDate
+                            ];
+
+                            return response()->json($success);
+                        }
                     }else{
                         throw new Exception("User has no manager role in the system!");
                     }
-                
-                }   
-            }else{
-                $findManagerRoleId = Roles::where("role_name", "Manager")->first();
-                $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$managerId])->exists();
-                if($findManagerGlobalRole===true){
-                    $status = ProjectsStatus::where("p_status", "Active")->first();
                     
-                    $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
-
-                    $credentials=[
-                        "p_name" => $project_name,
-                        "p_manager_id" => $managerId,
-                        "deadline" => $formattedDate,
-                        "p_status" => $status->id
-                    ];
-
-                    $create = Projects::create($credentials);
-
-                    ProjectParticipants::create([
-                        "user_id"=>$managerId,
-                        "p_id"=>$create->id,
-                    ]);
-
-                    if(!$create){
-                        $success=[   
-                            "message"=>"Fail under create project",
-                            "code"=>404,
-                        ];
-                        return response()->json($success);
-                    }else{
-                        $success=[   
-                            "message"=>"Thats it!",
-                            "code"=>200,
-                            "date"=>$formattedDate
-                        ];
-
-                        return response()->json($success);
-                    }
-                }else{
-                    throw new Exception("User has no manager role in the system!");
-                }
-                
-            }     
-        }else{
-            throw new Exception("Denied!");
-        }
-        
-        
+                }     
+            }else{
+                throw new Exception("Denied!");
+            }
+            
+        }); 
         
     }
 
@@ -571,85 +574,85 @@ class Api_Controller extends Controller
         
     }
     public function createTask(Request $request){
+        return DB::transaction(function() use(&$request){
+            $validator = Validator::make($request->all(),[
+                "task_name" => "required",
+                "description" => "nullable",
+                "deadline"=> "required|date_format:Y-m-d",
+                "project_id"=> "required",
+                "task_priority"=>"required",
+                "task_id"=>"nullable"
+            
+            ]);
+            
 
-        $validator = Validator::make($request->all(),[
-            "task_name" => "required",
-            "description" => "nullable",
-            "deadline"=> "required|date_format:Y-m-d",
-            "project_id"=> "required",
-            "task_priority"=>"required",
-            "task_id"=>"nullable"
-           
-        ]);
-        
+            if ($validator->fails()){
+                $response=[
+                    "validatorError"=>$validator->errors()->all(),
+                ];
+                    
+            
+                return response()->json($response, 400);
+            }
 
-        if ($validator->fails()){
-            $response=[
-                "validatorError"=>$validator->errors()->all(),
-            ];
-                
-           
-            return response()->json($response, 400);
-        }
+            /* $uniqueTaskName = Tasks::where("task_name",$validator->validated()['task_name'])->exists();
 
-       /* $uniqueTaskName = Tasks::where("task_name",$validator->validated()['task_name'])->exists();
+            if($uniqueTaskName){
+                $fail=[
+                    "message"=> "Name is not unique"
+                ];
+                return response()->json($fail,500);*/
+            $findTaskStatus=TaskStatus::where('task_status', "Active")->first();
+            if($validator->validated()['task_id'] != 0){
+                $findTask = Tasks::where(["id"=>$validator->validated()['task_id'], "p_id"=>$validator->validated()['project_id']])->first();
+                if($findTask != null){
+                    $update= $findTask->update([
+                        "task_name"=>$validator->validated()['task_name'],
+                        "deadline"=>$validator->validated()['deadline'],
+                        "description"=>$validator->validated()['description'],
+                        "p_id"=>$validator->validated()['project_id'],
+                        "t_priority"=>$validator->validated()['task_priority'],
 
-        if($uniqueTaskName){
-            $fail=[
-                "message"=> "Name is not unique"
-            ];
-            return response()->json($fail,500);*/
-        $findTaskStatus=TaskStatus::where('task_status', "Active")->first();
-        if($validator->validated()['task_id'] != 0){
-            $findTask = Tasks::where(["id"=>$validator->validated()['task_id'], "p_id"=>$validator->validated()['project_id']])->first();
-            if($findTask != null){
-                $update= $findTask->update([
+                    ]);
+                    $findTask->save();
+                    $success=[
+                        "message"=>"Update Successfull",
+                        "data"=>$update,
+                    ];
+                    
+                    return response()->json($success);
+                }    
+            }else{
+                $create= Tasks::create([
                     "task_name"=>$validator->validated()['task_name'],
                     "deadline"=>$validator->validated()['deadline'],
                     "description"=>$validator->validated()['description'],
                     "p_id"=>$validator->validated()['project_id'],
+                    "t_status"=>$findTaskStatus['id'],
                     "t_priority"=>$validator->validated()['task_priority'],
 
                 ]);
-                $findTask->save();
-                $success=[
-                    "message"=>"Update Successfull",
-                    "data"=>$update,
-                ];
+
+                if(!$create){
+                    $success=[   
+                        "message"=>"Fail under create task",
+                        "code"=>500,
+                    ];
+                    return response()->json($success);
+                }else{
+                    $success=[   
+                        "message"=>"Thats it! Task created Successfull",
+                        "code"=>200,
+                        
+                    ];
+
+                    return response()->json($success);
+                }
                 
-                return response()->json($success);
-            }    
-        }else{
-            $create= Tasks::create([
-                "task_name"=>$validator->validated()['task_name'],
-                "deadline"=>$validator->validated()['deadline'],
-                "description"=>$validator->validated()['description'],
-                "p_id"=>$validator->validated()['project_id'],
-                "t_status"=>$findTaskStatus['id'],
-                "t_priority"=>$validator->validated()['task_priority'],
 
-            ]);
 
-            if(!$create){
-                $success=[   
-                    "message"=>"Fail under create task",
-                    "code"=>500,
-                ];
-                return response()->json($success);
-            }else{
-                $success=[   
-                    "message"=>"Thats it! Task created Successfull",
-                    "code"=>200,
-                    
-                ];
-
-                return response()->json($success);
             }
-            
-
-
-        }
-        
+        });
         
         
     }    
@@ -658,23 +661,17 @@ class Api_Controller extends Controller
 
         $projects = Projects::where("id", $id)->first();
         $success =[];
-  
-
        
-            $findManager = User::where("id", $projects['p_manager_id'])->first();
-            $findStatus = ProjectsStatus::where("id", $projects['p_status'])->first();
-        
-
-            $success =[
-                "project_id" => $projects['id'],
-                "manager" => $findManager['name'],
-                "name"=>$projects['p_name'],
-                "status"=>$findStatus['p_status'],
-                "deadline"=>$projects['deadline']
-            ];
-
-           
-        
+        $findManager = User::where("id", $projects['p_manager_id'])->first();
+        $findStatus = ProjectsStatus::where("id", $projects['p_status'])->first();
+    
+        $success =[
+            "project_id" => $projects['id'],
+            "manager" => $findManager['name'],
+            "name"=>$projects['p_name'],
+            "status"=>$findStatus['p_status'],
+            "deadline"=>$projects['deadline']
+        ];
 
         if(!empty($success)){
             return response()->json($success,200);
@@ -740,25 +737,16 @@ class Api_Controller extends Controller
                 if(count($filter) == 1){
                     foreach($filter as $f){
                         $taskQuery->where('t_status', $f['id']);
-                    
                     }
                 }else{
                     foreach($filter as $f){
-                        
                         $ids[]=$f['id'];
-                        
-                        
-                        
                     }
                     if(!empty($ids)){
                         $taskQuery->whereIn('t_status', $ids);
                     }
-
                 }
-                
-                
             }
-
         }
         
         if(!empty($sortData)){
@@ -794,23 +782,20 @@ class Api_Controller extends Controller
             ];
         }
 
-            if(!empty($success)){
-                $ids=[];
-                return response()->json($success,200);
-            }else{
-                $ids=[];
-                $success=[   
-                    "message"=>"You have no tasks in this project!",
-                    "haveManagerRole"=>$haveManagerRole,
-                    "haveAdminRole"=>$haveAdminRole ?? false,
-                    "haveParticipantRole"=>$haveParticipantRole,
-                    "code"=>404,
-                ];
-                return response()->json($success,404);
-            }
-            
-        
-       
+        if(!empty($success)){
+            $ids=[];
+            return response()->json($success,200);
+        }else{
+            $ids=[];
+            $success=[   
+                "message"=>"You have no tasks in this project!",
+                "haveManagerRole"=>$haveManagerRole,
+                "haveAdminRole"=>$haveAdminRole ?? false,
+                "haveParticipantRole"=>$haveParticipantRole,
+                "code"=>404,
+            ];
+            return response()->json($success,404);
+        }
     }
 
     public function getProjectParticipants($id){
@@ -845,179 +830,178 @@ class Api_Controller extends Controller
        
     }
     public function AssignEmpoyleeToTask(Request $request){
-        $user=JWTAuth::parseToken()->authenticate();
-        $getGlobalRoles=[];
-        $roles = $user->roles()->get();
-        foreach($roles as $role){
-            $getGlobalRoles[] = $role->role_name;
-        }
+        return DB::transaction(function() use(&$request){
+            $user=JWTAuth::parseToken()->authenticate();
+            $getGlobalRoles=[];
+            $roles = $user->roles()->get();
+            foreach($roles as $role){
+                $getGlobalRoles[] = $role->role_name;
+            }
 
-        $haveManagerRole = in_array("Manager",$getGlobalRoles);
-        $haveAdminRole = in_array("Admin",$getGlobalRoles);
-        if($haveManagerRole===true || $haveAdminRole===true){
-            $data=$request->input('requestData');
-            $remove = $request->input('removeData');
-            $task_id = $request->input('task_id');
-            $project_id = $request->input('project_id');
-        
-            if(!empty($data)){
-                foreach($data as $d){
-                    $findAssignedUser = AssignedTask::where(["task_id"=>$d['task_id'], "p_participant_id"=>$d['id']])->exists();
-                    if($findAssignedUser==true){
-                        throw new Exception("User already assigned to this task");
-                    }else{
-                        AssignedTask::create([
-                            "task_id"=>$d['task_id'],
-                            "p_participant_id"=>$d['id']
-                        ]);
+            $haveManagerRole = in_array("Manager",$getGlobalRoles);
+            $haveAdminRole = in_array("Admin",$getGlobalRoles);
+            if($haveManagerRole===true || $haveAdminRole===true){
+                $data=$request->input('requestData');
+                $remove = $request->input('removeData');
+                $task_id = $request->input('task_id');
+                $project_id = $request->input('project_id');
+            
+                if(!empty($data)){
+                    foreach($data as $d){
+                        $findAssignedUser = AssignedTask::where(["task_id"=>$d['task_id'], "p_participant_id"=>$d['id']])->exists();
+                        if($findAssignedUser==true){
+                            throw new Exception("User already assigned to this task");
+                        }else{
+                            AssignedTask::create([
+                                "task_id"=>$d['task_id'],
+                                "p_participant_id"=>$d['id']
+                            ]);
+                        }
                     }
                 }
-            }
-            if(!empty($remove)){
-                foreach($remove as $r){
-                    $findParticipantId = ProjectParticipants::where(["user_id"=>$r['id'],"p_id"=> $project_id])->first();
+                if(!empty($remove)){
+                    foreach($remove as $r){
+                        $findParticipantId = ProjectParticipants::where(["user_id"=>$r['id'],"p_id"=> $project_id])->first();
 
-                    if(empty($findParticipantId)){
-                        throw new Exception("Datasbase error: User does not found!");
-                    
-                    }else{
-                        $findAssignedTask = AssignedTask::where([
-                            "task_id"=>$task_id,
-                            "p_participant_id"=>$findParticipantId['id']
-                        ])->first();
-
-                        if(!empty($findAssignedTask)){
-                            $findAssignedTask->delete();
-                            //$findAssignedTask->save();
+                        if(empty($findParticipantId)){
+                            throw new Exception("Datasbase error: User does not found!");
+                        
                         }else{
-                            throw new Exception( "Datasbase error occured!");
-                        }
-                    }    
-                }   
-            } 
+                            $findAssignedTask = AssignedTask::where([
+                                "task_id"=>$task_id,
+                                "p_participant_id"=>$findParticipantId['id']
+                            ])->first();
 
-            $success = ["message"=>"Success!"];
-            return response()->json($success,200);
-        }else{
-            throw new Exception("Denied!");
-        }
-                    
+                            if(!empty($findAssignedTask)){
+                                $findAssignedTask->delete();
+                                //$findAssignedTask->save();
+                            }else{
+                                throw new Exception( "Datasbase error occured!");
+                            }
+                        }    
+                    }   
+                } 
+
+                $success = ["message"=>"Success!"];
+                return response()->json($success,200);
+            }else{
+                throw new Exception("Denied!");
+            }
+        });           
     }
 
     public function AttachMyself($project_id, $task_id){
-        
-        $user = JWTAuth::parseToken()->authenticate();
-        $checkUserInProject = ProjectParticipants::where(["p_id"=> $project_id,"user_id"=> $user->id, ])->first();
+        return DB::transaction(function() use(&$project_id, &$task_id){
+            $user = JWTAuth::parseToken()->authenticate();
+            $checkUserInProject = ProjectParticipants::where(["p_id"=> $project_id,"user_id"=> $user->id, ])->first();
 
-        if(!empty($checkUserInProject)){
-            $alreadyAssigned = AssignedTask::where(["p_participant_id"=> $checkUserInProject->id,"task_id"=> $task_id])->exists();
-            if($alreadyAssigned===true){
-                throw new Exception("Already attached yourself!");
+            if(!empty($checkUserInProject)){
+                $alreadyAssigned = AssignedTask::where(["p_participant_id"=> $checkUserInProject->id,"task_id"=> $task_id])->exists();
+                if($alreadyAssigned===true){
+                    throw new Exception("Already attached yourself!");
+                }else{
+                    AssignedTask::create([
+                        "task_id"=>$task_id,
+                        "p_participant_id"=>$checkUserInProject->id
+                    ]);
+                }
+            
+                $success = [
+                    "message"=>"Task attach was successfull!",
+                    "code"=>200,
+                ];
+
             }else{
-                AssignedTask::create([
-                    "task_id"=>$task_id,
-                    "p_participant_id"=>$checkUserInProject->id
-                ]);
+                $success = [
+                    "message"=>"You have no permission to this task!",
+                    "code"=>500,
+                ];
+                return response()->json($success, 500);
             }
-           
-            $success = [
-                "message"=>"Task attach was successfull!",
-                "code"=>200,
-            ];
-
-        }else{
-            $success = [
-                "message"=>"You have no permission to this task!",
-                "code"=>500,
-            ];
-            return response()->json($success, 500);
-        }
-       
-       
-        return response()->json($success, 200);
+            return response()->json($success, 200);
+        });
     }
 
     public function createParticipants(Request $request){
-        $user=JWTAuth::parseToken()->authenticate();
-        $getGlobalRoles=[];
-        $roles = $user->roles()->get();
-        foreach($roles as $role){
-            $getGlobalRoles[] = $role->role_name;
-        }
-
-        $haveManagerRole = in_array("Manager",$getGlobalRoles);
-        $haveAdminRole = in_array("Admin",$getGlobalRoles);
-        if($haveManagerRole===true || $haveAdminRole===true){
-            $validator = Validator::make($request->all(),[
-                "participants" => "nullable",
-                "project" => "required",
-                "remove"=>"nullable"
-            ]);
-
-            if ($validator->fails()){
-                $response=[
-                    "validatorError"=>$validator->errors()->all(),
-                ];
-                return response()->json($response, 400);
+        return DB::transaction(function() use(&$request){
+            $user=JWTAuth::parseToken()->authenticate();
+            $getGlobalRoles=[];
+            $roles = $user->roles()->get();
+            foreach($roles as $role){
+                $getGlobalRoles[] = $role->role_name;
             }
 
-            $participants = $request->input('participants');
-            $project = $validator->validated()['project'];
-            $remove = $request->input('remove');
-            if(empty($participants) && empty($remove)){
-                throw new Exception("Operation canceld!");
-            }
-            if(!empty($participants)){
-                foreach($participants as $parti){
-                    $findParticipants= ProjectParticipants::where(["user_id"=>$parti['id'], "p_id"=>$project['project_id']])->exists();
-                    if($findParticipants == true){
-                        throw new Exception("Participants already attached!");
-                    }else{
-                        $find_status_id = ProjectsStatus::where("p_status", $project["status"])->first();
-                        ProjectParticipants::create([
-                            "user_id"=>$parti['id'],
-                            "p_id"=>$project['project_id'],
-                        ]);
-                    }
-                    
-                };
-                $success=[
-                    "message"=>"Thats it! Participants created Successfull",
-                    "code"=>200,
-                    
-                ];
-            }
-            
-            if(!empty($remove)){
-                
-                foreach($remove as $r){
-                    #$r['id'] === ProjectParticipants->id
-                    $findManagerInParticipants= ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->first();
-                    if(empty($findManagerInParticipants)){
-                        throw new Exception("Datasbase error: User does not found!");
-                    }else{
-                        $findAsManager= Projects::where(["p_manager_id"=> $findManagerInParticipants->user_id, "id"=>$project['project_id']])->exists();
-                        if($findAsManager === true){
-                            throw new Exception("You can not remove the project manager");
+            $haveManagerRole = in_array("Manager",$getGlobalRoles);
+            $haveAdminRole = in_array("Admin",$getGlobalRoles);
+            if($haveManagerRole===true || $haveAdminRole===true){
+                $validator = Validator::make($request->all(),[
+                    "participants" => "nullable",
+                    "project" => "required",
+                    "remove"=>"nullable"
+                ]);
+
+                if ($validator->fails()){
+                    $response=[
+                        "validatorError"=>$validator->errors()->all(),
+                    ];
+                    return response()->json($response, 400);
+                }
+
+                $participants = $request->input('participants');
+                $project = $validator->validated()['project'];
+                $remove = $request->input('remove');
+                if(empty($participants) && empty($remove)){
+                    throw new Exception("Operation canceld!");
+                }
+                if(!empty($participants)){
+                    foreach($participants as $parti){
+                        $findParticipants= ProjectParticipants::where(["user_id"=>$parti['id'], "p_id"=>$project['project_id']])->exists();
+                        if($findParticipants == true){
+                            throw new Exception("Participants already attached!");
                         }else{
-                            $findTasks = Tasks::where("p_id",$project['project_id'])->pluck('id');
-                            AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->delete();
-                            ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->delete();
+                            $find_status_id = ProjectsStatus::where("p_status", $project["status"])->first();
+                            ProjectParticipants::create([
+                                "user_id"=>$parti['id'],
+                                "p_id"=>$project['project_id'],
+                            ]);
+                        }
+                        
+                    };
+                    $success=[
+                        "message"=>"Thats it! Participants created Successfull",
+                        "code"=>200,
+                    ];
+                }
+                
+                if(!empty($remove)){
+                    
+                    foreach($remove as $r){
+                        #$r['id'] === ProjectParticipants->id
+                        $findManagerInParticipants= ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->first();
+                        if(empty($findManagerInParticipants)){
+                            throw new Exception("Datasbase error: User does not found!");
+                        }else{
+                            $findAsManager= Projects::where(["p_manager_id"=> $findManagerInParticipants->user_id, "id"=>$project['project_id']])->exists();
+                            if($findAsManager === true){
+                                throw new Exception("You can not remove the project manager");
+                            }else{
+                                $findTasks = Tasks::where("p_id",$project['project_id'])->pluck('id');
+                                AssignedTask::where("p_participant_id",$r['id'])->whereIn("task_id",$findTasks)->delete();
+                                ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->delete();
+                            }
                         }
                     }
-                }
-                $success=[
-                    "message"=>"Thats it!",
-                    "code"=>200,
-                    
-                ];  
-            }           
+                    $success=[
+                        "message"=>"Thats it!",
+                        "code"=>200,
+                    ];  
+                }           
 
-            return response()->json($success,200);
-        }else{
-            throw new Exception("Denied!");
-        }
-        
+                return response()->json($success,200);
+            }else{
+                throw new Exception("Denied!");
+            }
+        });
        
     }
 
@@ -1035,8 +1019,6 @@ class Api_Controller extends Controller
                     "name"=> $findUser->name,
                     "email"=> $findUser->email,
                 ];
-
-               
             }
 
             return response()->json($success);
@@ -1048,49 +1030,46 @@ class Api_Controller extends Controller
 
             return response()->json($success);
         }
-
-        
     }
 
 
     public function SendMessage(Request $request){
+        return DB::transaction(function() use(&$request){
+            $message= $request->input('message');
+            $data = $request->input('data');
+            $projectId =$request->input('projectId');
+            
+            
 
-        $participants = $request->input('participants');
-        $message= $request->input('message');
-        $data = $request->input('data');
-        $projectId =$request->input('projectId');
-        
-        
+            if($message !== null && $data !== null){
+                $user = JWTAuth::parseToken()->authenticate();
 
-        if($message !== null && $data !== null){
-            $user = JWTAuth::parseToken()->authenticate();
+                $create = ChatMessages::create([
+                    "p_id"=> $projectId,
+                    "task_id"=>$data['id'],
+                    "sender_id"=>$user->id,
+                    "message"=>$message,
 
-            $create = ChatMessages::create([
-                "p_id"=> $projectId,
-                "task_id"=>$data['id'],
-                "sender_id"=>$user->id,
-                "message"=>$message,
+                ]);
 
-            ]);
-
-            $create= true;
-            if(!$create){
-                throw new Exception("Fail under sending message!");  
-                   
-            }else{
-                $success=[   
-                    "message"=>"That's it!",
-                    "code"=>200,
+                $create= true;
+                if(!$create){
+                    throw new Exception("Fail under sending message!");  
                     
-                ];
+                }else{
+                    $success=[   
+                        "message"=>"That's it!",
+                        "code"=>200,
+                        
+                    ];
 
-                return response()->json($success);
+                    return response()->json($success);
+                }
+            }else{
+                throw new Exception("Operation canceld");
+                
             }
-        }else{
-            throw new Exception("Operation canceld");
-               
-        }
-       
+        });
     }
     public function getMessages(Request $request){
         
@@ -1098,32 +1077,20 @@ class Api_Controller extends Controller
 
         $projectId = $request->input('projectId');
         $taskId = $request->input('taskId');
-        $participants=$request->input('participants');
        
         $allMessages=[];
         $findMessages= ChatMessages::where(["p_id" => $projectId,
         "task_id"=> $taskId])->orderBy('created_at', 'asc')->get();
         
         foreach($findMessages as $foum){
-
-        
             $findSender = User::where("id", $foum->sender_id)->first();
-
-
             $allMessages[]=[
-                
                 "sender_id"=>$findSender->id,
                 "sender_name"=>$findSender->name,
-                
                 "message"=>$foum->message,
                 "created_at"=>$foum->created_at->format('Y-m-d H:i')
             ];
-            
-            
         }
-        
-        
-       
 
         $filterChatMessages=ChatMessages::where(["p_id" => $projectId,
         "task_id"=> $taskId])->where("sender_id","!=",$user->id)->get();
@@ -1139,10 +1106,7 @@ class Api_Controller extends Controller
                     "chat_id" => $message->id,
                 ]);
             }
-
         }
-       
-        
        
         $success=[
             "messageData"=> $allMessages,
@@ -1151,8 +1115,6 @@ class Api_Controller extends Controller
         ];
         
         return response()->json($success, 200);
-        
-
     }
     
     public function getUnreadMessages(){
@@ -1176,21 +1138,7 @@ class Api_Controller extends Controller
                     $Project[]=[
                         "UnreadProject_Project_id"=>$findByProjectId['p_id'],
                     ];
-                }/*else{
-                    //ezt az else ágat át kellene gondolni, mert most minden üzenet új id-val szúródik be az
-                    //adatbázisba. Így nem lesz olyan eset, amikor ugyanaz az id mégegyszer szerepelne. 
-                    $findOpenedMessage= ChatView::where("chat_id",$findByProjectId['id'])->get();
-               
-                    
-                    foreach($findOpenedMessage as $opened){
-                        if($opened['updated_at']<=$findByProjectId['created_at']){
-                            $haveUnreadOpenedProjectMessages=true;
-                            $Project[]=[
-                                "UnreadOpenedProject_Project_id"=>$findByProjectId['p_id'],
-                            ];
-                        }
-                    }
-                }*/
+                }
             }
             
             $assignedTasks = AssignedTask::where("p_participant_id",$projects['id'] )->get();
@@ -1207,21 +1155,7 @@ class Api_Controller extends Controller
                             "UnreadTaskMessages_Task_id"=>$ChatMessage['task_id'],
                             "UnreadTask_Project_id"=>$ChatMessage['p_id']
                         ];
-                    }/*else{
-                        //szerintem itt is u.a. mint fent...
-                        $findOpenedMessage= ChatView::where("chat_id",$ChatMessage['id'])->get();
-
-                        $enterTheHook=true;
-                        foreach($findOpenedMessage as $opened){
-                            if($findByTaskId['created_at']>$opened['updated_at']){
-                                $haveUnreadOpenedTaskMessages=true;
-                                $Task[]=[
-                                    "UnreadOpenedTask_Task_id"=>$ChatMessage['task_id'],
-                                    "UnreadOpenedTask_Project_id"=>$ChatMessage['p_id']
-                                ];
-                            }
-                        }
-                    }*/
+                    }
                 }
             }
         }
@@ -1316,11 +1250,9 @@ class Api_Controller extends Controller
             }else if($haveAdminRole===false){
                 
                 throw new Exception("You have no access permission!");
-                
             }
         }
 
-        
         if (
             $haveAdminRole ==true && 
             $haveProjectParticipantRole ==true &&  
@@ -1341,12 +1273,9 @@ class Api_Controller extends Controller
                 "admin"=>$AdminButtons,
             ];
             return response()->json($admin,200);
-            
         }
 
-       
         return response()->json($success,200);
-
     }
 
     public function getUsersButton(){
@@ -1362,8 +1291,6 @@ class Api_Controller extends Controller
         foreach($users as $user){
             $roles = $user->roles()->get();
             $globalRoles = $roles->pluck('role_name');
-
-            
             $getGlobalRoles[] = [
                "roles" => $globalRoles,
             ];
@@ -1422,131 +1349,121 @@ class Api_Controller extends Controller
 
     
     public function setStatus(Request $request){
+        return DB::transaction(function() use(&$request){
+            $ProjectId=$request->input('projectId');
+            $TaskId=$request->input('taskId');
+            $StatusId=$request->input('StatusId');
+            $PriorityId=$request->input('priorityId');
+            $SetAllTask=$request->input('setAllTask');
+            $SetAllPriority=$request->input('setAllPriority');
 
-        $ProjectId=$request->input('projectId');
-        $TaskId=$request->input('taskId');
-        $StatusId=$request->input('StatusId');
-        $PriorityId=$request->input('priorityId');
-        $SetAllTask=$request->input('setAllTask');
-        $SetAllPriority=$request->input('setAllPriority');
+            $data = [
+                'ProjectId' => $ProjectId,
+                'TaskId' =>  $TaskId,
+                'StatusId'=>$StatusId,
+                'PriorityId'=>$PriorityId,
+                'SetAllTask'=> $SetAllTask,
+                'SetAllPriority'=> $SetAllPriority,
+            ];
+        
+            $rules = [
+                'ProjectId' => 'required',
+                'TaskId' => 'nullable',
+                'StatusId' => 'nullable',
+                'PriorityId'=>'nullable',
+                'SetAllTask'=>'nullable|boolean',
+                'SetAllPriority'=>'nullable|boolean'
+            ];
+        
+            $validator = Validator::make($data, $rules);
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+            if($StatusId == 'undefined'){
+                throw new Exception("Status set is reqired!");
+            }
 
-        $data = [
-            'ProjectId' => $ProjectId,
-            'TaskId' =>  $TaskId,
-            'StatusId'=>$StatusId,
-            'PriorityId'=>$PriorityId,
-            'SetAllTask'=> $SetAllTask,
-            'SetAllPriority'=> $SetAllPriority,
-        ];
-    
-        $rules = [
-            'ProjectId' => 'required',
-            'TaskId' => 'nullable',
-            'StatusId' => 'nullable',
-            'PriorityId'=>'nullable',
-            'SetAllTask'=>'nullable|boolean',
-            'SetAllPriority'=>'nullable|boolean'
-        ];
-    
-        $validator = Validator::make($data, $rules);
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
-        if($StatusId == 'undefined'){
-            throw new Exception("Status set is reqired!");
-        }
+            $SetAllTaskBool = filter_var($SetAllTask,FILTER_VALIDATE_BOOLEAN);
+            $SetAllPriorityBool = filter_var($SetAllPriority,FILTER_VALIDATE_BOOLEAN);
+            $success=[];
 
-        $SetAllTaskBool = filter_var($SetAllTask,FILTER_VALIDATE_BOOLEAN);
-        $SetAllPriorityBool = filter_var($SetAllPriority,FILTER_VALIDATE_BOOLEAN);
-        $success=[];
+            if($TaskId == null){
+                $findProject= Projects::where("id", $ProjectId)->first();
+                if(!empty($findProject)){
+                    
 
-        if($TaskId == null){
-            $findProject= Projects::where("id", $ProjectId)->first();
-            if(!empty($findProject)){
+                    $findProject->touch();
+                    $findProject->update([
+                        "p_status"=>$StatusId
+                    ]);
+                    
                 
+                    $success[]=[
+                        "message"=>"Update Successfull!",
+                    ];
+                    return response()->json($success,200);
+                }
 
-                $findProject->touch();
-                $findProject->update([
-                    "p_status"=>$StatusId
-                ]);
+            }else{
                 
-               
+                $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
+                if($StatusId !== null && $SetAllTaskBool===false){
+                    
+                    $findProjectTasks->touch();
+                    $findProjectTasks->update([
+                        "t_status"=>$StatusId,
+                        
+                    ]);
+                    $success[]=[
+                        "message"=>"Update Successfull!",
+                    ];
+                }else if($StatusId !== null && $SetAllTaskBool===true){
+                    
+                    $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
+                    if($findProjectTasks->isEmpty()){
+                        throw new Exception("Query is empty");
+                    }else{
+                        foreach($findProjectTasks as $task){
+                            $task->touch();
+                            $task->t_status = $StatusId;
+                            $task->save();
+                        }
+                    }
+                }
+                
+                if($PriorityId !== null && $SetAllPriorityBool===true){
+                    $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
+                    if(empty($findProjectTasks)){
+                        throw new Exception("Query is empty");
+                    }else{
+                        foreach($findProjectTasks as $task){
+                            $task->touch();
+                            $task->update([
+                                "t_priority"=>$PriorityId
+                            ]);
+                        }
+                    } 
+                    return response()->json($findProjectTasks,200);
+                }else if($PriorityId !== null && $SetAllPriorityBool===false){
+                    $findTask = Tasks::where(["p_id"=> $ProjectId, "id"=>$TaskId])->first();
+                    if(empty($findTask)){
+                        throw new Exception("Task does not exists");
+                    }else{
+                        
+                        $findTask->touch();
+                        $findTask->update([
+                            "t_priority"=>$PriorityId
+                        ]);                        
+                    } 
+                    return response()->json($findTask,200);
+                }
+            
                 $success[]=[
                     "message"=>"Update Successfull!",
                 ];
                 return response()->json($success,200);
             }
-
-        }else{
-            
-            $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
-            if($StatusId !== null && $SetAllTaskBool===false){
-                
-                $findProjectTasks->touch();
-                $findProjectTasks->update([
-                    "t_status"=>$StatusId,
-                    
-                ]);
-                $success[]=[
-                    "message"=>"Update Successfull!",
-                ];
-            }else if($StatusId !== null && $SetAllTaskBool===true){
-                
-                $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                if($findProjectTasks->isEmpty()){
-                    throw new Exception("Query is empty");
-                }else{
-                    foreach($findProjectTasks as $task){
-                        $task->touch();
-                        $task->t_status = $StatusId;
-                        $task->save();
-                    }
-                }
-                
-            }
-            
-            if($PriorityId !== null && $SetAllPriorityBool===true){
-                $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                if(empty($findProjectTasks)){
-                    throw new Exception("Query is empty");
-                }else{
-                    foreach($findProjectTasks as $task){
-                        $task->touch();
-                        $task->update([
-                            "t_priority"=>$PriorityId
-                        ]);
-                    }
-                    
-                } 
-                return response()->json($findProjectTasks,200);
-            }else if($PriorityId !== null && $SetAllPriorityBool===false){
-                $findTask = Tasks::where(["p_id"=> $ProjectId, "id"=>$TaskId])->first();
-                if(empty($findTask)){
-                    throw new Exception("Task does not exists");
-                }else{
-                    
-                    $findTask->touch();
-                    $findTask->update([
-                        "t_priority"=>$PriorityId
-                    ]);
-                  
-                    
-                } 
-                return response()->json($findTask,200);
-            }
-           
-
-           
-            $success[]=[
-                "message"=>"Update Successfull!",
-            ];
-            return response()->json($success,200);
-            
-            
-            
-            
-        
-        }
+        });
     }
 
     public function statusFilterProjectOrTask($ProjectId,$Task, $StatusId){
@@ -1628,9 +1545,6 @@ class Api_Controller extends Controller
                 ];
                 return response()->json($success,404);
             }
-           
-            
-            
         }
     }
 
@@ -1724,64 +1638,61 @@ class Api_Controller extends Controller
     }
 
     public function Completed(Request $request){
-        $user= JWTAuth::parseToken()->authenticate();
-        $ProjectId = $request->input('projectId');
-        $TaskData = $request->input('taskData');
+        return DB::transaction(function() use(&$request){
+            $user= JWTAuth::parseToken()->authenticate();
+            $ProjectId = $request->input('projectId');
+            $TaskData = $request->input('taskData');
 
-        $data = [
-            'ProjectId' => $ProjectId,
-            'taskData' => $TaskData,
-        ];
-    
-        $rules = [
-            'ProjectId' => 'nullable',
-            'taskData'=>'required',
-        ];
-    
-        $validator = Validator::make($data, $rules);
+            $data = [
+                'ProjectId' => $ProjectId,
+                'taskData' => $TaskData,
+            ];
         
-    
-        if ($validator->fails()) {
-            throw new ValidationException($validator);
-        }
+            $rules = [
+                'ProjectId' => 'nullable',
+                'taskData'=>'required',
+            ];
+        
+            $validator = Validator::make($data, $rules);
+            
+        
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
 
-        $success=[];
+            $success=[];
 
-        $findUserasParticipant=ProjectParticipants::where(["user_id"=> $user->id, "p_id"=>$ProjectId])->first();
-        if(empty($findUserasParticipant)){
-            throw new Exception("Denied!");
-        }else{
-                $findAssignedTask=AssignedTask::where(["p_participant_id" => $findUserasParticipant->id, "task_id"=>$TaskData['task_id']?? $TaskData['id']])->first();
-                if(empty($findAssignedTask)){
-                    throw new Exception("Denied!");
-                    
-                }else{
-                    
-                    $findTask=Tasks::where("id", $TaskData['task_id']?? $TaskData['id'])->first();
-                    $findStatus = TaskStatus::where("task_status", $TaskData['status'])->first();
-                    if(!empty($findTask)){
-                        
-                        $findTask->update([
-                            "t_status"=>$findStatus->id
-                        ]);
-                        $findTask->save();
+            $findUserasParticipant=ProjectParticipants::where(["user_id"=> $user->id, "p_id"=>$ProjectId])->first();
+            if(empty($findUserasParticipant)){
+                throw new Exception("Denied!");
+            }else{
+                    $findAssignedTask=AssignedTask::where(["p_participant_id" => $findUserasParticipant->id, "task_id"=>$TaskData['task_id']?? $TaskData['id']])->first();
+                    if(empty($findAssignedTask)){
+                        throw new Exception("Denied!");
                         
                     }else{
-                        throw new Exception("Task does not exist!");
+                        
+                        $findTask=Tasks::where("id", $TaskData['task_id']?? $TaskData['id'])->first();
+                        $findStatus = TaskStatus::where("task_status", $TaskData['status'])->first();
+                        if(!empty($findTask)){
+                            
+                            $findTask->update([
+                                "t_status"=>$findStatus->id
+                            ]);
+                            $findTask->save();
+                            
+                        }else{
+                            throw new Exception("Task does not exist!");
+                        }
                     }
+            }
 
-                    
-                }
-                    
-            
-            
-        }
+            $success[]=[
+                "message"=>"Nice job!"
+            ];
 
-        $success[]=[
-            "message"=>"Nice job!"
-        ];
-
-        return response()->json($success,200);
+            return response()->json($success,200);
+        });
     }
 
     public function MyTasks(Request $request){
@@ -1828,10 +1739,7 @@ class Api_Controller extends Controller
                 "priority" => $findPriority->task_priority,
                 "priorityId" => $findPriority->id
             ];
-            
         }
-        
-
         if (empty($success)) {
             throw new Exception("You have no tasks!");
         }
@@ -1843,15 +1751,10 @@ class Api_Controller extends Controller
         $user= JWTAuth::parseToken()->authenticate();
         
         $success=[];
-            
-        
         $roles = $user->roles()->get();
         foreach($roles as $r){
             $success[]=["role"=>$r->role_name];
         }
-        
-        
-        
 
         if(!empty($success)){
             return response()->json($success,200);
@@ -1896,7 +1799,6 @@ class Api_Controller extends Controller
         }
 
         return response()->json($success,200);
-
     }     
     
     public function addFavoriteProject(Request $request){
@@ -1942,42 +1844,7 @@ class Api_Controller extends Controller
         $filterData = $request->input('filterData');
 
         $findProjectById = FavoriteProjects::where("added_by",$user->id)->pluck('project_id');
-        
-        /*$projectsQuery= Projects::query();
-        if(!empty($filterData)){
-            $ids=[];
-            foreach($filterData as $filter){
-                if(count($filter) == 1){
-                    foreach($filter as $f){
-                        $projectsQuery->where('p_status', $f['id']);
-                    
-                    }
-                }else{
-                    foreach($filter as $f){
-                        
-                        $ids[]=$f['id'];
-                        
-                        
-                        
-                    }
-                    if(!empty($ids)){
-                        $projectsQuery->whereIn('p_status', $ids);
-                    }
 
-                }
-                
-                
-            }
-
-        }
-        
-        if(!empty($sortData)){
-            foreach($sortData as $sort){
-                $projectsQuery->orderBy($sort['key'], $sort['abridgement']);
-            }
-            
-        }
-        $projects = $projectsQuery->get();*/
         $success=[];
         if(empty($findProjectById)){
             throw new Exception("You have no favorite project");
@@ -2064,35 +1931,25 @@ class Api_Controller extends Controller
                 if(count($filter) == 1){
                     foreach($filter as $f){
                         $projectsQuery->where('p_status', $f['id']);
-                    
                     }
                 }else{
                     foreach($filter as $f){
-                        
                         $ids[]=$f['id'];
-                        
-                        
-                        
                     }
                     if(!empty($ids)){
                         $projectsQuery->whereIn('p_status', $ids);
                     }
-
                 }
-                
-                
             }
-
         }
         
         if(!empty($sortData)){
             foreach($sortData as $sort){
                 $projectsQuery->orderBy($sort['key'], $sort['abridgement']);
             }
-            
         }
-        $projects = $projectsQuery->get();
 
+        $projects = $projectsQuery->get();
         $success =[];
   
        
@@ -2111,15 +1968,12 @@ class Api_Controller extends Controller
                 "deadline"=>$project->deadline,
                 "favorite"=>$findFavorite
             ];
-
-           
         }
 
         if(!empty($success)){
             return response()->json($success,200);
         }else{
             throw new Exception("You have no managed projects!");
-           
         }
     }
 
@@ -2174,18 +2028,12 @@ class Api_Controller extends Controller
                                 
                                 $ids[]=$f['id'];
                                 
-                                
-                                
                             }
                             if(!empty($ids)){
                                 $taskQuery->whereIn('t_status', $ids);
                             }
-
                         }
-                        
-                        
                     }
-
                 }
                 
                 if(!empty($sortData)){
@@ -2226,8 +2074,6 @@ class Api_Controller extends Controller
         }else{
             throw new Exception("Access Denied");
         }
-
-        
     }
 
     public function managedCompletedTasks(){
@@ -2329,75 +2175,79 @@ class Api_Controller extends Controller
     }
 
     public function acceptAllTask(){
-        $user=JWTAuth::parseToken()->authenticate();
-        $users = User::where("id", $user->id)->get();
-       
-        $getGlobalRoles=[];
-        foreach($users as $user){
-            $roles = $user->roles()->get();
-            $globalRoles = $roles->pluck('role_name');
+        return DB::transaction(function(){
+            $user=JWTAuth::parseToken()->authenticate();
+            $users = User::where("id", $user->id)->get();
+        
+            $getGlobalRoles=[];
+            foreach($users as $user){
+                $roles = $user->roles()->get();
+                $globalRoles = $roles->pluck('role_name');
 
-            
-            $getGlobalRoles[] = [
-               "roles" => $globalRoles,
-            ];
-        }
-
-        $haveManagerRole = $globalRoles->contains('Manager');
-
-        if($haveManagerRole===true){
-            $findCompleted = TaskStatus::where("task_status", "Completed")->pluck('id');
-            $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
-            $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
-            $taskQuery = Tasks::whereIn("p_id",$projectsQuery);
-            $taskQuery->where('t_status', $findCompleted);
-            $tasks = $taskQuery->get();            
-                        
-            $findAccepted = TaskStatus::where("task_status", "Accepted")->first();
-            foreach($tasks as $task){
-                $task->update([
-                   "t_status"=>$findAccepted->id
-                ]);
+                
+                $getGlobalRoles[] = [
+                "roles" => $globalRoles,
+                ];
             }
 
-           
-            $success=[   
-                "message"=>"All task accepted!",
-                "haveManagerRole"=>$haveManagerRole,
-                "code"=>200,
-            ];
-            return response()->json($success,200);
+            $haveManagerRole = $globalRoles->contains('Manager');
+
+            if($haveManagerRole===true){
+                $findCompleted = TaskStatus::where("task_status", "Completed")->pluck('id');
+                $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
+                $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
+                $taskQuery = Tasks::whereIn("p_id",$projectsQuery);
+                $taskQuery->where('t_status', $findCompleted);
+                $tasks = $taskQuery->get();            
+                            
+                $findAccepted = TaskStatus::where("task_status", "Accepted")->first();
+                foreach($tasks as $task){
+                    $task->update([
+                    "t_status"=>$findAccepted->id
+                    ]);
+                }
+
             
-        }else{
-            throw new Exception("Access Denied");
-        }        
+                $success=[   
+                    "message"=>"All task accepted!",
+                    "haveManagerRole"=>$haveManagerRole,
+                    "code"=>200,
+                ];
+                return response()->json($success,200);
+                
+            }else{
+                throw new Exception("Access Denied");
+            }
+        });       
 
     }
 
     public function leaveProject(Request $request){
-        $user=JWTAuth::parseToken()->authenticate();
+        return DB::transaction(function() use(&$request){
+            $user=JWTAuth::parseToken()->authenticate();
 
-        $projectId = $request->input('projectId');
-        
-        $findUser=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$projectId])->first();
+            $projectId = $request->input('projectId');
+            
+            $findUser=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$projectId])->first();
 
-        $findUserAsManager=Projects::where(["id"=>$projectId, "p_manager_id"=>$user->id])->exists();
-        if($findUserAsManager === true){
-            throw new Exception("The manager can not leave the project");
-        }
-        
-        $findAssignedTasks=AssignedTask::where("p_participant_id",$findUser['id'])->get();
-        
-        $findAssignedTasks->each->delete();
-        
-        $findUser->delete();
+            $findUserAsManager=Projects::where(["id"=>$projectId, "p_manager_id"=>$user->id])->exists();
+            if($findUserAsManager === true){
+                throw new Exception("The manager can not leave the project");
+            }
+            
+            $findAssignedTasks=AssignedTask::where("p_participant_id",$findUser['id'])->get();
+            
+            $findAssignedTasks->each->delete();
+            
+            $findUser->delete();
 
-        $findProjectInFavorite = FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->get();
-        
-        $findProjectInFavorite->each->delete();
-            //FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->delete();
-        $success="You leave this project";
-        return response()->json($success,200);
+            $findProjectInFavorite = FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectId])->get();
+            
+            $findProjectInFavorite->each->delete();
+                
+            $success="You leave this project";
+            return response()->json($success,200);
+        });
     }
 
     public function countOfMyTasks(){
@@ -2423,43 +2273,43 @@ class Api_Controller extends Controller
         
     }
     public function saveProfileData(Request $request){
-        $user=JWTAuth::parseToken()->authenticate();
-        $name = $request->input('name');
-        $email = $request->input('email');
+        return DB::transaction(function() use(&$request){
+            $user=JWTAuth::parseToken()->authenticate();
+            $name = $request->input('name');
+            $email = $request->input('email');
 
-        $validator = Validator::make($request->all(),[
-            "name"=>"required",
-            "email"=>"required"
-        ]);
-        if ($validator->fails()){
-            $response=[
-                "validatorError"=>$validator->errors()->all(),
-            ];
-            return response()->json($response, 400);
-        }
-
-        $checkUser = User::where('id',$user->id)->exists();
-        if($checkUser===false){
-            throw new Exception('User does not exitst');
-        }else{
-            $updateUser = User::where('id',$user->id);
-            if(!empty($name)){
-                $updateUser->update([
-                    "name"=>$name,
-                ]);
+            $validator = Validator::make($request->all(),[
+                "name"=>"required",
+                "email"=>"required"
+            ]);
+            if ($validator->fails()){
+                $response=[
+                    "validatorError"=>$validator->errors()->all(),
+                ];
+                return response()->json($response, 400);
             }
 
-            if(!empty($email)){
-                $updateUser->update([
-                    "email"=>$email,
-                ]);
+            $checkUser = User::where('id',$user->id)->exists();
+            if($checkUser===false){
+                throw new Exception('User does not exitst');
+            }else{
+                $updateUser = User::where('id',$user->id);
+                if(!empty($name)){
+                    $updateUser->update([
+                        "name"=>$name,
+                    ]);
+                }
+
+                if(!empty($email)){
+                    $updateUser->update([
+                        "email"=>$email,
+                    ]);
+                }
+
+                $success = "Update Successfull";
+                return response()->json($success,200);
             }
-
-            $success = "Update Successfull";
-            return response()->json($success,200);
-
-        }
-
+        });
          
     }
 

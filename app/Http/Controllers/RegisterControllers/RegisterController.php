@@ -10,119 +10,99 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\DB;
 
 
 
 class RegisterController extends Controller
 {
     public function register(Request $request){
+        return DB::transaction(function() use(&$request){
+            $validator = Validator::make($request->all(),[
+                "name" => "required",
+                "email" => "required|email",
+                "password" => "required",
+                "confirm_password" => "required|same:password"
+            ]);
 
-        $validator = Validator::make($request->all(),[
-            "name" => "required",
-            "email" => "required|email",
-            "password" => "required",
-            "confirm_password" => "required|same:password"
-        ]);
-
-        if ($validator->fails()){
-            $response=[
-                "validatorError"=> $validator->errors()->all()
+            if ($validator->fails()){
+                $response=[
+                    "validatorError"=> $validator->errors()->all()
+                ];
+                return response()->json($response, 422);
+            }
+            
+            
+            $input = [
+                "name" =>$request->name,
+                "email"=>$request->email,
+                "password" =>bcrypt($request->password),
+                "status"=>"active"
             ];
-            return response()->json($response, 422);
-        }
-        
-        
-        $input = [
-            "name" =>$request->name,
-            "email"=>$request->email,
-            "password" =>bcrypt($request->password),
-            "status"=>"active"
-        ];
 
-        $user = User::create($input);
+            $user = User::create($input);
+            $success["token"]= $user->createToken("Procejt-Lab-Token")->plainTextToken;
+            $success["name"] =$user->name;
+                
 
-        /*$findrole = Roles::where("role_name", "Employee")->first();
-
-        $credentials=[
-            'user_id' => $user->id,
-            'role_id' => $findrole->id
-        ];
-
-        $role= RoleToUser::create($credentials);
-        if(!$role){
-            $success=[   
-                "message"=>"Attached not work",
-                "code"=>404,
+            $response = [
+                "success"=>true,
+                "data"=>$success,
+                "message"=>"User register Successfull"
             ];
-            return response()->json($success);
-        }else{
-            $success=[   
-                "message"=>"Thats it!",
-                "code"=>200,
-            ];
-        }*/
 
-        $success["token"]= $user->createToken("Procejt-Lab-Token")->plainTextToken;
-        $success["name"] =$user->name;
-              
-
-        $response = [
-            "success"=>true,
-            "data"=>$success,
-            "message"=>"User register Successfull"
-        ];
-
-        return response()->json($response,200);
+            return response()->json($response,200);
+        });
     }
 
     public function createUser(Request $request){
+        return DB::transaction(function() use(&$request){
+            $validator = Validator::make($request->all(),[
+                "name" => "required",
+                "email" => "required|email",
+            ]);
 
-        $validator = Validator::make($request->all(),[
-            "name" => "required",
-            "email" => "required|email",
-        ]);
+            if ($validator->fails()){
+                $response=[
+                    "validatorError"=>$validator->errors()->all(),
+                ];
+                return response()->json($response, 400);
+            }
+            
+            $name = $validator->validated()['name'];
+            $email = $validator->validated()['email'];
+            $token = Str::random(60);
 
-        if ($validator->fails()){
-            $response=[
-                "validatorError"=>$validator->errors()->all(),
+            $user_cresendals=[
+                "name" => $name,
+                "email" => $email,
+                "status" =>"active"
             ];
-            return response()->json($response, 400);
-        }
-        
-        $name = $validator->validated()['name'];
-        $email = $validator->validated()['email'];
-        $token = Str::random(60);
 
-        $user_cresendals=[
-            "name" => $name,
-            "email" => $email,
-            "status" =>"active"
-        ];
+            User::create($user_cresendals);
 
-        User::create($user_cresendals);
+            $cresendals = [
+                'email' => $email,
+                'token' => $token,
+            ];
 
-        $cresendals = [
-            'email' => $email,
-            'token' => $token,
-        ];
+            PasswordResets::create($cresendals);
+            
+            $success=[
+                "url" =>env("FRONTEND_URL").'/reset-password/'.$token,
+                "name" => $name,
+                "email" => $email,
+            ];
+                
 
-        PasswordResets::create($cresendals);
-        
-        $success=[
-            "url" =>env("FRONTEND_URL").'/reset-password/'.$token,
-            "name" => $name,
-            "email" => $email,
-        ];
-              
+            $response = [
+                "success"=>true,
+                "data"=>$success,
+                "message"=>"User created Successfull"
+            ];
 
-        $response = [
-            "success"=>true,
-            "data"=>$success,
-            "message"=>"User created Successfull"
-        ];
-
-        return response()->json($response,200);
+            return response()->json($response,200);
+        });
     }
 
     public function findUser($token){
@@ -156,105 +136,110 @@ class RegisterController extends Controller
     }
 
     public function resetPassword(Request $request){
-        $validator = Validator::make($request->all(),[
-            "email" => "required|email",
-            "password" => "required",
-            "confirm_password" => "required|same:password"
-        ]);
+        return DB::transaction(function() use(&$request){
+            $validator = Validator::make($request->all(),[
+                "email" => "required|email",
+                "password" => "required",
+                "confirm_password" => "required|same:password"
+            ]);
 
-        if ($validator->fails()){
-            $response=[
-                "success" => false,
-                "message"=> $validator->errors()
-            ];
-            return response()->json($response, 400);
-        }
-        
-        $password = $validator->validated()['password'];
-        $email = $validator->validated()['email'];
-        $find = User::where('email', $email)->first();
-
-        if($find){
-
-            $find->password = bcrypt($password);
-            $find->status = "active";
-            $find->save();
-            PasswordResets::where('email', $email)->delete();
+            if ($validator->fails()){
+                $response=[
+                    "success" => false,
+                    "message"=> $validator->errors()
+                ];
+                return response()->json($response, 400);
+            }
             
+            $password = $validator->validated()['password'];
+            $email = $validator->validated()['email'];
+            $find = User::where('email', $email)->first();
 
-            $success=[
-                "message" => "Password Reset Successfull",
-                "status" => 200
-            ];
-            return response()->json($success);
-        }else{
-            $success=[
-                "message" => "Invalid email",
-                "status" => 500
-            ];
+            if($find){
 
-            return response()->json($success);
-        }
+                $find->password = bcrypt($password);
+                $find->status = "active";
+                $find->save();
+                PasswordResets::where('email', $email)->delete();
+                
+
+                $success=[
+                    "message" => "Password Reset Successfull",
+                    "status" => 200
+                ];
+                return response()->json($success);
+            }else{
+                $success=[
+                    "message" => "Invalid email",
+                    "status" => 500
+                ];
+
+                return response()->json($success);
+            }
+        });
     }
 
     public function passwordResetManual($id){
-       $finduser= User::find($id);
-       $finduser->password = null;
-       $finduser->remember_token = null;
-       $finduser->status="temporary deactivate";
-       $finduser->save();
+        return DB::transaction(function() use(&$id){
+            $finduser= User::find($id);
+            $finduser->password = null;
+            $finduser->remember_token = null;
+            $finduser->status="temporary deactivate";
+            $finduser->save();
 
 
-       if(!$finduser){
-        $success=[
-            "message" => "User does not exist",
-            "status" => 500
-        ];
-        return response()->json($success);
-       }
-       
-       $token = Str::random(60);
-       $cresendals= [
-        "email"=>$finduser->email,
-        "token"=>$token
-       ];
-       //A USERS táblában érdemes lenne egy státuszállítás ezen a ponton
+            if(!$finduser){
+                $success=[
+                    "message" => "User does not exist",
+                    "status" => 500
+                ];
+                return response()->json($success);
+            }
+            
+            $token = Str::random(60);
+            $cresendals= [
+                "email"=>$finduser->email,
+                "token"=>$token
+            ];
+            //A USERS táblában érdemes lenne egy státuszállítás ezen a ponton
 
-       PasswordResets::create($cresendals);
-       
-       $success=[
-           "url" =>env("FRONTEND_URL")."/reset-password/".$token,
-           "name" => $finduser->name,
-           "email" => $finduser->email,
-       ];
-             
+            PasswordResets::create($cresendals);
+            
+            $success=[
+                "url" =>env("FRONTEND_URL")."/reset-password/".$token,
+                "name" => $finduser->name,
+                "email" => $finduser->email,
+            ];
+                    
 
-       $response = [
-           "success"=>true,
-           "data"=>$success,
-           "message"=>"User created Successfull"
-       ];
-       
+            $response = [
+                "success"=>true,
+                "data"=>$success,
+                "message"=>"User created Successfull"
+            ];
+            
 
-       return response()->json($response,200);
-
+            return response()->json($response,200);
+        });
        
 
     }
 
     public function bannTheUser($id){
-        $finduser= User::find($id);
-        $finduser->status="Banned";
-        $finduser->save();
+        return DB::transaction(function() use(&$id){
+            $finduser= User::find($id);
+            $finduser->status="Banned";
+            $finduser->save();
 
 
-        if(!$finduser){
-        $success=[
-            "message" => "User does not exist",
-            "status" => 500
-        ];
-        return response()->json($success);
-        }
+            if(!$finduser){
+            $success=[
+                "message" => "User does not exist",
+                "status" => 500
+            ];
+            return response()->json($success);
+            }
+        });
     }
 
 }
