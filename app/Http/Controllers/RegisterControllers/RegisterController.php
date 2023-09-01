@@ -42,7 +42,7 @@ class RegisterController extends Controller
 
         $user = User::create($input);
 
-        $findrole = Roles::where("role_name", "Employee")->first();
+        /*$findrole = Roles::where("role_name", "Employee")->first();
 
         $credentials=[
             'user_id' => $user->id,
@@ -61,7 +61,7 @@ class RegisterController extends Controller
                 "message"=>"Thats it!",
                 "code"=>200,
             ];
-        }
+        }*/
 
         $success["token"]= $user->createToken("Procejt-Lab-Token")->plainTextToken;
         $success["name"] =$user->name;
