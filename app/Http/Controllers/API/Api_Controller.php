@@ -344,7 +344,6 @@ class Api_Controller extends Controller
                 if(!empty($project_id)){
                     $findProject = Projects::where(["id"=>$project_id])->first();
                     if($findProject != null){
-                        $status = ProjectsStatus::where("p_status", "Active")->first();
                         $formattedDate = Date::createFromFormat('Y.m.d', $request->date)->format('Y-m-d');
                         $findManagerRoleId = Roles::where("role_name", "Manager")->first();
                         $findManagerGlobalRole = RoleToUser::where(["role_id"=>$findManagerRoleId->id, "user_id"=>$managerId])->exists();
@@ -353,8 +352,6 @@ class Api_Controller extends Controller
                             "p_name" => $project_name,
                             "p_manager_id" => $managerId,
                             "deadline" => $formattedDate,
-                            "p_status" => $status->id
-
                             ]);
                             $checkManagerIsParticipant= ProjectParticipants::where(["user_id"=>$managerId, "p_id"=>$project_id])->exists();
                             if($checkManagerIsParticipant === false){
