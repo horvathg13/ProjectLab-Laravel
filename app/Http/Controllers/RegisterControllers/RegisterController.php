@@ -20,7 +20,7 @@ class RegisterController extends Controller
         return DB::transaction(function() use(&$request){
             $validator = Validator::make($request->all(),[
                 "name" => "required",
-                "email" => "required|email",
+                "email" => "required|email|unique",
                 "password" => "required",
                 "confirm_password" => "required|same:password"
             ]);
@@ -31,8 +31,8 @@ class RegisterController extends Controller
                 ];
                 return response()->json($response, 422);
             }
-            
-            
+
+
             $input = [
                 "name" =>$request->name,
                 "email"=>$request->email,
@@ -43,12 +43,12 @@ class RegisterController extends Controller
             $user = User::create($input);
             $success["token"]= $user->createToken("Procejt-Lab-Token")->plainTextToken;
             $success["name"] =$user->name;
-                
+
 
             $response = [
                 "success"=>true,
                 "data"=>$success,
-                "message"=>"User register Successfull"
+                "message"=>"User register Successful"
             ];
 
             return response()->json($response,200);
@@ -68,7 +68,7 @@ class RegisterController extends Controller
                 ];
                 return response()->json($response, 400);
             }
-            
+
             $name = $validator->validated()['name'];
             $email = $validator->validated()['email'];
             $token = Str::random(60);
@@ -87,13 +87,13 @@ class RegisterController extends Controller
             ];
 
             PasswordResets::create($cresendals);
-            
+
             $success=[
                 "url" =>env("FRONTEND_URL").'/reset-password/'.$token,
                 "name" => $name,
                 "email" => $email,
             ];
-                
+
 
             $response = [
                 "success"=>true,
@@ -109,7 +109,7 @@ class RegisterController extends Controller
         $passwordReset = PasswordResets::where('token', $token)->first();
 
         if (!$passwordReset) {
-            
+
             return response()->json(['error' => 'Invalid token'], 404);
         }
 
@@ -130,9 +130,9 @@ class RegisterController extends Controller
                 "error" => "Invalid email"
             ];
             return response()->json($success);
-        };
+        }
 
-        
+
     }
 
     public function resetPassword(Request $request){
@@ -150,7 +150,7 @@ class RegisterController extends Controller
                 ];
                 return response()->json($response, 400);
             }
-            
+
             $password = $validator->validated()['password'];
             $email = $validator->validated()['email'];
             $find = User::where('email', $email)->first();
@@ -161,7 +161,7 @@ class RegisterController extends Controller
                 $find->status = "active";
                 $find->save();
                 PasswordResets::where('email', $email)->delete();
-                
+
 
                 $success=[
                     "message" => "Password Reset Successfull",
@@ -195,7 +195,7 @@ class RegisterController extends Controller
                 ];
                 return response()->json($success);
             }
-            
+
             $token = Str::random(60);
             $cresendals= [
                 "email"=>$finduser->email,
@@ -204,24 +204,24 @@ class RegisterController extends Controller
             //A USERS táblában érdemes lenne egy státuszállítás ezen a ponton
 
             PasswordResets::create($cresendals);
-            
+
             $success=[
                 "url" =>env("FRONTEND_URL")."/reset-password/".$token,
                 "name" => $finduser->name,
                 "email" => $finduser->email,
             ];
-                    
+
 
             $response = [
                 "success"=>true,
                 "data"=>$success,
                 "message"=>"User created Successfull"
             ];
-            
+
 
             return response()->json($response,200);
         });
-       
+
 
     }
 
