@@ -59,7 +59,7 @@ class RegisterController extends Controller
         return DB::transaction(function() use(&$request){
             $validator = Validator::make($request->all(),[
                 "name" => "required",
-                "email" => "required|email",
+                "email" => "required|email|unique",
             ]);
 
             if ($validator->fails()){
