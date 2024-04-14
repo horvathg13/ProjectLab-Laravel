@@ -33,7 +33,7 @@ Route::post("user-to-role",[App\Http\Controllers\API\Api_Controller::class, "use
 Route::post("password-reset-manual/{id}",[App\Http\Controllers\RegisterControllers\RegisterController::class, "passwordResetManual"]);
 Route::post("createproject",[App\Http\Controllers\API\Api_Controller::class, "createProject"]);
 Route::post("getprojects",[App\Http\Controllers\API\Api_Controller::class, "getProjects"]);
-Route::post("bann-user/{id}",[App\Http\Controllers\RegisterControllers\RegisterController::class, "bannTheUser"]);
+Route::post("ban-user/{id}",[App\Http\Controllers\RegisterControllers\RegisterController::class, "bannTheUser"]);
 Route::post("getpriorities",[App\Http\Controllers\API\Api_Controller::class, "getPriorities"]);
 Route::post("createtask",[App\Http\Controllers\API\Api_Controller::class, "createtask"]);
 Route::post("getprojectparticipants/{id}",[App\Http\Controllers\API\Api_Controller::class, "getProjectParticipants"]);
