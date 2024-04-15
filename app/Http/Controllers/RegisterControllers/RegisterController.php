@@ -20,7 +20,7 @@ class RegisterController extends Controller
         return DB::transaction(function() use(&$request){
             $validator = Validator::make($request->all(),[
                 "name" => "required",
-                "email" => "required|email|unique",
+                "email" => "required|email|unique:users,email",
                 "password" => "required",
                 "confirm_password" => "required|same:password"
             ]);
@@ -59,7 +59,7 @@ class RegisterController extends Controller
         return DB::transaction(function() use(&$request){
             $validator = Validator::make($request->all(),[
                 "name" => "required",
-                "email" => "required|email|unique",
+                "email" => "required|email|unique:users,email",
             ]);
 
             if ($validator->fails()){
