@@ -1288,7 +1288,7 @@ class Api_Controller extends Controller
         foreach($users as $user){
             $roles = $user->roles()->get();
             $globalRoles = $roles->pluck('role_name');
-            $getGlobalRoles[] = [
+            $getGlobalRoles = [
                "roles" => $globalRoles,
             ];
         }
@@ -1296,7 +1296,7 @@ class Api_Controller extends Controller
         $haveAdminRole = $globalRoles->contains('Admin');
 
         if($haveAdminRole == true){
-            $success[]=[
+            $success=[
                 "admin"=>$AdminButtons,
                 "message"=>"You can access to admin buttons!"
             ];
