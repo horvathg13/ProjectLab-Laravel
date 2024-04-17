@@ -818,11 +818,7 @@ class Api_Controller extends Controller
         if(!empty($success)){
             return response()->json($success,200);
         }else{
-            $success=[
-                "message"=>"You have no participans in this project!",
-                "code"=>404,
-            ];
-            return response()->json($success,404);
+            throw new \Exception('You have no participans in this project.');
         }
 
     }
@@ -948,7 +944,7 @@ class Api_Controller extends Controller
                 $project = $validator->validated()['project'];
                 $remove = $request->input('remove');
                 if(empty($participants) && empty($remove)){
-                    throw new Exception("Operation canceld!");
+                    throw new Exception("Operation canceled!");
                 }
                 if(!empty($participants)){
                     foreach($participants as $parti){
@@ -965,7 +961,7 @@ class Api_Controller extends Controller
 
                     };
                     $success=[
-                        "message"=>"Thats it! Participants created Successfull",
+                        "message"=>"That's it! Participants created Successfully",
                         "code"=>200,
                     ];
                 }
@@ -976,7 +972,7 @@ class Api_Controller extends Controller
                         #$r['id'] === ProjectParticipants->id
                         $findManagerInParticipants= ProjectParticipants::where(["id"=>$r['id'],"p_id"=> $project['project_id']])->first();
                         if(empty($findManagerInParticipants)){
-                            throw new Exception("Datasbase error: User does not found!");
+                            throw new Exception("Database error: User does not found!");
                         }else{
                             $findAsManager= Projects::where(["p_manager_id"=> $findManagerInParticipants->user_id, "id"=>$project['project_id']])->exists();
                             if($findAsManager === true){
@@ -989,7 +985,7 @@ class Api_Controller extends Controller
                         }
                     }
                     $success=[
-                        "message"=>"Thats it!",
+                        "message"=>"That's it!",
                         "code"=>200,
                     ];
                 }
@@ -1031,41 +1027,40 @@ class Api_Controller extends Controller
 
 
     public function SendMessage(Request $request){
-        return DB::transaction(function() use(&$request){
+        return DB::transaction(function() use($request){
+            $validator = Validator::make($request->all(),[
+                "message"=>"required",
+                "projectId"=>"required",
+                "taskId"=>"nullable"
+            ]);
+
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+
             $message= $request->input('message');
-            $data = $request->input('data');
+            $taskId = $request->input('taskId');
             $projectId =$request->input('projectId');
 
+            $user = JWTAuth::parseToken()->authenticate();
 
-
-            if($message !== null && $data !== null){
-                $user = JWTAuth::parseToken()->authenticate();
-
-                $create = ChatMessages::create([
+            try{
+                ChatMessages::create([
                     "p_id"=> $projectId,
-                    "task_id"=>$data['id'],
+                    "task_id"=>$taskId?:null,
                     "sender_id"=>$user->id,
                     "message"=>$message,
-
                 ]);
-
-                $create= true;
-                if(!$create){
-                    throw new Exception("Fail under sending message!");
-
-                }else{
-                    $success=[
-                        "message"=>"That's it!",
-                        "code"=>200,
-
-                    ];
-
-                    return response()->json($success);
-                }
-            }else{
-                throw new Exception("Operation canceld");
-
+            }catch (\Exception $e){
+                throw new $e('Fail under sending message!');
             }
+
+            $success=[
+                "message"=>"That's it!",
+                "code"=>200,
+            ];
+
+            return response()->json($success);
         });
     }
     public function getMessages(Request $request){
@@ -1333,14 +1328,14 @@ class Api_Controller extends Controller
                 "message"=>"That's it!",
                 "status"=>$getProjectsStatus
             ];
-            return response()->json($success,200);
+            return response()->json($getProjectsStatus,200);
         }else{
             $getTasksStatus = TaskStatus::all();
-            $success[]=[
+            $success=[
                 "message"=>"That's it!",
                 "status"=>$getTasksStatus
             ];
-            return response()->json($success,200);
+            return response()->json($getTasksStatus,200);
         }
     }
 
@@ -1351,25 +1346,19 @@ class Api_Controller extends Controller
             $TaskId=$request->input('taskId');
             $StatusId=$request->input('StatusId');
             $PriorityId=$request->input('priorityId');
-            $SetAllTask=$request->input('setAllTask');
-            $SetAllPriority=$request->input('setAllPriority');
 
             $data = [
                 'ProjectId' => $ProjectId,
                 'TaskId' =>  $TaskId,
                 'StatusId'=>$StatusId,
                 'PriorityId'=>$PriorityId,
-                'SetAllTask'=> $SetAllTask,
-                'SetAllPriority'=> $SetAllPriority,
             ];
 
             $rules = [
                 'ProjectId' => 'required',
                 'TaskId' => 'nullable',
-                'StatusId' => 'nullable',
+                'StatusId' => 'required',
                 'PriorityId'=>'nullable',
-                'SetAllTask'=>'nullable|boolean',
-                'SetAllPriority'=>'nullable|boolean'
             ];
 
             $validator = Validator::make($data, $rules);
@@ -1380,20 +1369,15 @@ class Api_Controller extends Controller
                 throw new Exception("Status set is reqired!");
             }
 
-            $SetAllTaskBool = filter_var($SetAllTask,FILTER_VALIDATE_BOOLEAN);
-            $SetAllPriorityBool = filter_var($SetAllPriority,FILTER_VALIDATE_BOOLEAN);
             $success=[];
 
             if($TaskId == null){
                 $findProject= Projects::where("id", $ProjectId)->first();
                 if(!empty($findProject)){
-
-
                     $findProject->touch();
                     $findProject->update([
                         "p_status"=>$StatusId
                     ]);
-
 
                     $success[]=[
                         "message"=>"Update Successfull!",
@@ -1402,58 +1386,15 @@ class Api_Controller extends Controller
                 }
 
             }else{
-
                 $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
-                if($StatusId !== null && $SetAllTaskBool===false){
+                $findProjectTasks->touch();
+                $findProjectTasks->update([
+                    "t_status"=>$StatusId,
+                ]);
+                $success[]=[
+                    "message"=>"Update Successfull!",
+                ];
 
-                    $findProjectTasks->touch();
-                    $findProjectTasks->update([
-                        "t_status"=>$StatusId,
-
-                    ]);
-                    $success[]=[
-                        "message"=>"Update Successfull!",
-                    ];
-                }else if($StatusId !== null && $SetAllTaskBool===true){
-
-                    $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                    if($findProjectTasks->isEmpty()){
-                        throw new Exception("Query is empty");
-                    }else{
-                        foreach($findProjectTasks as $task){
-                            $task->touch();
-                            $task->t_status = $StatusId;
-                            $task->save();
-                        }
-                    }
-                }
-
-                if($PriorityId !== null && $SetAllPriorityBool===true){
-                    $findProjectTasks = Tasks::where("p_id", $ProjectId)->get();
-                    if(empty($findProjectTasks)){
-                        throw new Exception("Query is empty");
-                    }else{
-                        foreach($findProjectTasks as $task){
-                            $task->touch();
-                            $task->update([
-                                "t_priority"=>$PriorityId
-                            ]);
-                        }
-                    }
-                    return response()->json($findProjectTasks,200);
-                }else if($PriorityId !== null && $SetAllPriorityBool===false){
-                    $findTask = Tasks::where(["p_id"=> $ProjectId, "id"=>$TaskId])->first();
-                    if(empty($findTask)){
-                        throw new Exception("Task does not exists");
-                    }else{
-
-                        $findTask->touch();
-                        $findTask->update([
-                            "t_priority"=>$PriorityId
-                        ]);
-                    }
-                    return response()->json($findTask,200);
-                }
 
                 $success[]=[
                     "message"=>"Update Successfull!",
