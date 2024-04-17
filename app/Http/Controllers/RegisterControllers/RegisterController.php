@@ -98,7 +98,7 @@ class RegisterController extends Controller
             $response = [
                 "success"=>true,
                 "data"=>$success,
-                "message"=>"User created Successfull"
+                "message"=>"User created Successful"
             ];
 
             return response()->json($response,200);
@@ -164,7 +164,7 @@ class RegisterController extends Controller
 
 
                 $success=[
-                    "message" => "Password Reset Successfull",
+                    "message" => "Password Reset Successful",
                     "status" => 200
                 ];
                 return response()->json($success);
@@ -201,7 +201,6 @@ class RegisterController extends Controller
                 "email"=>$finduser->email,
                 "token"=>$token
             ];
-            //A USERS táblában érdemes lenne egy státuszállítás ezen a ponton
 
             PasswordResets::create($cresendals);
 
@@ -215,7 +214,7 @@ class RegisterController extends Controller
             $response = [
                 "success"=>true,
                 "data"=>$success,
-                "message"=>"User created Successfull"
+                "message"=>"User created Successful"
             ];
 
 
