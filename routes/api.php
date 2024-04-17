@@ -41,7 +41,7 @@ Route::post("createparticipants",[App\Http\Controllers\API\Api_Controller::class
 Route::post("projects/{id}/tasks",[App\Http\Controllers\API\Api_Controller::class, "getTasks"]);
 Route::post("projects/{id}",[App\Http\Controllers\API\Api_Controller::class, "getProjectById"]);
 Route::post("assign-employee-to-task",[App\Http\Controllers\API\Api_Controller::class, "AssignEmpoyleeToTask"]);
-Route::post("projects/{project_id}/tasks/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "AttachMyself"]);
+Route::post("task-attach-to-myself",[App\Http\Controllers\API\Api_Controller::class, "AttachMyself"]);
 Route::post("getActiveEmployees/{task_id}",[App\Http\Controllers\API\Api_Controller::class, "getActiveEmployees"]);
 Route::post("detach/{projectId}/{taskId}/{userId}",[App\Http\Controllers\API\Api_Controller::class, "detachUser"]);
 Route::post("send-message",[App\Http\Controllers\API\Api_Controller::class, "sendMessage"]);

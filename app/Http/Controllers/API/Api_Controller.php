@@ -541,32 +541,18 @@ class Api_Controller extends Controller
     }
 
     public function getPriorities(){
-
         $priorities = TaskPriorities::all();
         $success=[];
-
-        if(!empty($priorities)){
-
-            foreach ($priorities as $p){
-
-                $success[]=[
-                    "id"=>$p->id,
-                    "name"=>$p->task_priority
+        if(!empty($priorities)) {
+            foreach ($priorities as $p) {
+                $success[] = [
+                    "id" => $p->id,
+                    "name" => $p->task_priority
                 ];
             }
-
-            $responseArray=[
-            "message" => "That's all!",
-            "data" => $success,
-            "status" => 200
-        ];
-        return response()->json($responseArray,200);
+            return response()->json($success,200);
         }else{
-            $success=[
-                "message"=>"Database error",
-                "code"=>500,
-            ];
-            return response()->json($success);
+           throw new \Exception('Database error occurred.');
         }
 
     }
@@ -582,23 +568,13 @@ class Api_Controller extends Controller
 
             ]);
 
-
             if ($validator->fails()){
                 $response=[
                     "validatorError"=>$validator->errors()->all(),
                 ];
-
-
                 return response()->json($response, 400);
             }
 
-            /* $uniqueTaskName = Tasks::where("task_name",$validator->validated()['task_name'])->exists();
-
-            if($uniqueTaskName){
-                $fail=[
-                    "message"=> "Name is not unique"
-                ];
-                return response()->json($fail,500);*/
             $findTaskStatus=TaskStatus::where('task_status', "Active")->first();
             if($validator->validated()['task_id'] != 0){
                 $findTask = Tasks::where(["id"=>$validator->validated()['task_id'], "p_id"=>$validator->validated()['project_id']])->first();
@@ -645,13 +621,8 @@ class Api_Controller extends Controller
 
                     return response()->json($success);
                 }
-
-
-
             }
         });
-
-
     }
 
     public function getProjectById($id){
@@ -764,6 +735,8 @@ class Api_Controller extends Controller
             $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
             $findMyTask = $findUserasParticipant ? AssignedTask::where(["task_id"=>$task->id,"p_participant_id"=>$findUserasParticipant->id])->exists() : false;
             $success[]=[
+                "taskData"=>
+                [
                 "task_id"=>$task->id,
                 "task_name"=>$task->task_name,
                 "deadline"=>$task->deadline,
@@ -773,17 +746,20 @@ class Api_Controller extends Controller
                 "priority"=>$findPriority->task_priority,
                 "employees"=>$findTaskParticiantsCount,
                 "mytask"=>$findMyTask,
-                "haveManagerRole"=>$haveManagerRole,
-                "haveAdminRole"=>$haveAdminRole,
-                "haveParticipantRole"=>$haveParticipantRole
+                ]
             ];
         }
 
         if(!empty($success)){
-            $ids=[];
+            $success[]=[
+                "roles"=>[
+                    "haveManagerRole"=>$haveManagerRole,
+                    "haveAdminRole"=>$haveAdminRole,
+                    "haveParticipantRole"=>$haveParticipantRole,
+                ]
+            ];
             return response()->json($success,200);
         }else{
-            $ids=[];
             $success=[
                 "message"=>"You have no tasks in this project!",
                 "haveManagerRole"=>$haveManagerRole,
@@ -883,9 +859,13 @@ class Api_Controller extends Controller
         });
     }
 
-    public function AttachMyself($project_id, $task_id){
-        return DB::transaction(function() use(&$project_id, &$task_id){
+    public function AttachMyself(Request $request){
+        return DB::transaction(function() use($request){
             $user = JWTAuth::parseToken()->authenticate();
+
+            $project_id=$request->projectId;
+            $task_id=$request->task_id;
+
             $checkUserInProject = ProjectParticipants::where(["p_id"=> $project_id,"user_id"=> $user->id, ])->first();
 
             if(!empty($checkUserInProject)){
@@ -1357,7 +1337,7 @@ class Api_Controller extends Controller
             $rules = [
                 'ProjectId' => 'required',
                 'TaskId' => 'nullable',
-                'StatusId' => 'required',
+                'StatusId' => 'nullable',
                 'PriorityId'=>'nullable',
             ];
 
@@ -1368,7 +1348,9 @@ class Api_Controller extends Controller
             if($StatusId == 'undefined'){
                 throw new Exception("Status set is reqired!");
             }
-
+            if($StatusId === null && $TaskId!==null && $PriorityId===null){
+                throw new \Exception('Operation canceled');
+            }
             $success=[];
 
             if($TaskId == null){
@@ -1378,24 +1360,27 @@ class Api_Controller extends Controller
                     $findProject->update([
                         "p_status"=>$StatusId
                     ]);
-
                     $success[]=[
-                        "message"=>"Update Successfull!",
+                        "message"=>"Update Successful!",
                     ];
                     return response()->json($success,200);
                 }
-
             }else{
                 $findProjectTasks = Tasks::where(["p_id"=>$ProjectId, "id"=>$TaskId])->first();
                 $findProjectTasks->touch();
-                $findProjectTasks->update([
-                    "t_status"=>$StatusId,
-                ]);
+                if($StatusId !== null){
+                    $findProjectTasks->update([
+                        "t_status"=>$StatusId,
+                    ]);
+                }
+                if($PriorityId !== null){
+                    $findProjectTasks->update([
+                        "t_priority"=>$PriorityId,
+                    ]);
+                }
                 $success[]=[
                     "message"=>"Update Successfull!",
                 ];
-
-
                 $success[]=[
                     "message"=>"Update Successfull!",
                 ];
@@ -1593,7 +1578,6 @@ class Api_Controller extends Controller
 
             $validator = Validator::make($data, $rules);
 
-
             if ($validator->fails()) {
                 throw new ValidationException($validator);
             }
@@ -1609,11 +1593,9 @@ class Api_Controller extends Controller
                         throw new Exception("Denied!");
 
                     }else{
-
                         $findTask=Tasks::where("id", $TaskData['task_id']?? $TaskData['id'])->first();
-                        $findStatus = TaskStatus::where("task_status", $TaskData['status'])->first();
+                        $findStatus = TaskStatus::where("task_status", "Completed")->first();
                         if(!empty($findTask)){
-
                             $findTask->update([
                                 "t_status"=>$findStatus->id
                             ]);
@@ -1624,11 +1606,9 @@ class Api_Controller extends Controller
                         }
                     }
             }
-
             $success[]=[
                 "message"=>"Nice job!"
             ];
-
             return response()->json($success,200);
         });
     }
