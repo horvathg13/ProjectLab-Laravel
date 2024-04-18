@@ -1647,15 +1647,19 @@ class Api_Controller extends Controller
             $status = TaskStatus::where('id', $task['t_status'])->first();
 
             $success[] = [
-                "id" => $task->id,
-                "name" => $task->task_name,
-                "deadline" => $task->deadline,
-                "description" => $task->description,
-                "projectName" => $findProjectname['p_name'],
-                "projectId" => $findProjectname['id'],
-                "status" => $status['task_status'],
-                "priority" => $findPriority->task_priority,
-                "priorityId" => $findPriority->id
+                "taskData"=>[
+                    "id" => $task->id,
+                    "task_name" => $task->task_name,
+                    "deadline" => $task->deadline,
+                    "description" => $task->description,
+                    "status" => $status['task_status'],
+                    "priority" => $findPriority->task_priority,
+                    "priorityId" => $findPriority->id
+                ],
+                "projectData"=>[
+                "name" => $findProjectname['p_name'],
+                "project_id" => $findProjectname['id'],
+                ]
             ];
         }
         if (empty($success)) {
