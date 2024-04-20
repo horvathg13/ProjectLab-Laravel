@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Auth;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class Auth_Controller extends Controller
-{   
-   
+{
+
 
     public function login(Request $request){
         if (Auth::attempt(["email"=>$request->email, "password"=>$request->password])) {
@@ -27,11 +27,11 @@ class Auth_Controller extends Controller
                 $success["token"]= $token;
 
                 Auth::login($user, true);
-        
+
                 $response = [
                     "success"=>true,
                     "data"=>$success,
-                    "message"=>"User Login Successfull",              
+                    "message"=>"User Login Successfull",
                 ];
                 return response()->json($response);
             }else{
@@ -41,7 +41,7 @@ class Auth_Controller extends Controller
                 ];
                 return response()->json($response, 401);
             }
-            
+
         }else{
             $response = [
                 "success" => false,
@@ -49,7 +49,7 @@ class Auth_Controller extends Controller
             ];
             return response()->json($response, 401);
         }
-    
+
     }
 
     public function logout(){
@@ -63,6 +63,6 @@ class Auth_Controller extends Controller
             "message"=>"User Logout Successfull",
         ];
         return response()->json($response);
-        
+
     }
 }
