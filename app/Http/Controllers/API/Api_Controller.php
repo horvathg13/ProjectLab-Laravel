@@ -130,7 +130,7 @@ class Api_Controller extends Controller
                 "roles" => $roleNames,
             ];
         }
-        //var_dump($globalRoles);
+
         foreach($globalRoles as $global){
             if($global['roles']->contains('Employee') ){
                 $allEmployee[]=[
