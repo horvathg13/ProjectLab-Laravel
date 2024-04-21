@@ -1975,6 +1975,9 @@ class Api_Controller extends Controller
                     $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
                     $findStatus = TaskStatus::where("id",$task->t_status)->first();
                     $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
+                    $findUserasParticipant = ProjectParticipants::where(["p_id"=>$task->p_id, "user_id" => $user->id])->first();
+                    $findMyTask = $findUserasParticipant ? AssignedTask::where(["task_id"=>$task->id,"p_participant_id"=>$findUserasParticipant->id])->exists() : false;
+
 
                     $success[]=[
                         "task_id"=>$task->id,
@@ -1986,7 +1989,8 @@ class Api_Controller extends Controller
                         "priority"=>$findPriority->task_priority,
                         "employees"=>$findTaskParticiantsCount,
                         "haveManagerRole"=>$haveManagerRole,
-                        "p_id"=>$task->p_id
+                        "p_id"=>$task->p_id,
+                        "myTask"=>$findMyTask
                     ];
                 }
 
