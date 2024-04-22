@@ -1282,7 +1282,7 @@ class Api_Controller extends Controller
             ];
         }else{
 
-            throw new Exception("Access denid");
+            throw new Exception("Access Denied");
         }
 
         return response()->json($success,200);
