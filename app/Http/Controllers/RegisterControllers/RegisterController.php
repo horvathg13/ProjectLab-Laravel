@@ -11,7 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-
+use PHPUnit\Util\Exception;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 
 class RegisterController extends Controller
@@ -57,51 +58,62 @@ class RegisterController extends Controller
 
     public function createUser(Request $request){
         return DB::transaction(function() use(&$request){
-            $validator = Validator::make($request->all(),[
-                "name" => "required",
-                "email" => "required|email|unique:users,email",
-            ]);
-
-            if ($validator->fails()){
-                $response=[
-                    "validatorError"=>$validator->errors()->all(),
-                ];
-                return response()->json($response, 400);
+            $user=JWTAuth::parseToken()->authenticate();
+            $user = User::where("id", $user->id)->get();
+            foreach($user as $u){
+                $roles = $u->roles()->get();
+                $globalRoles = $roles->pluck('role_name');
             }
+            $haveAdminRole = $globalRoles->contains('Admin');
+            if($haveAdminRole===true) {
+                $validator = Validator::make($request->all(), [
+                    "name" => "required",
+                    "email" => "required|email|unique:users,email",
+                ]);
 
-            $name = $validator->validated()['name'];
-            $email = $validator->validated()['email'];
-            $token = Str::random(60);
+                if ($validator->fails()) {
+                    $response = [
+                        "validatorError" => $validator->errors()->all(),
+                    ];
+                    return response()->json($response, 400);
+                }
 
-            $user_cresendals=[
-                "name" => $name,
-                "email" => $email,
-                "status" =>"active"
-            ];
+                $name = $validator->validated()['name'];
+                $email = $validator->validated()['email'];
+                $token = Str::random(60);
 
-            User::create($user_cresendals);
+                $user_cresendals = [
+                    "name" => $name,
+                    "email" => $email,
+                    "status" => "active"
+                ];
 
-            $cresendals = [
-                'email' => $email,
-                'token' => $token,
-            ];
+                User::create($user_cresendals);
 
-            PasswordResets::create($cresendals);
+                $cresendals = [
+                    'email' => $email,
+                    'token' => $token,
+                ];
 
-            $success=[
-                "url" =>env("FRONTEND_URL").'/reset-password/'.$token,
-                "name" => $name,
-                "email" => $email,
-            ];
+                PasswordResets::create($cresendals);
+
+                $success = [
+                    "url" => env("FRONTEND_URL") . '/reset-password/' . $token,
+                    "name" => $name,
+                    "email" => $email,
+                ];
 
 
-            $response = [
-                "success"=>true,
-                "data"=>$success,
-                "message"=>"User created Successful"
-            ];
+                $response = [
+                    "success" => true,
+                    "data" => $success,
+                    "message" => "User created Successful"
+                ];
 
-            return response()->json($response,200);
+                return response()->json($response, 200);
+            }else{
+                throw new Exception('Access Denied');
+            }
         });
     }
 
