@@ -1,16 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\RegisterControllers;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\PermissionController as Permission;
 use App\Models\PasswordResets;
-use App\Models\Roles;
-use App\Models\RoleToUser;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 use PHPUnit\Util\Exception;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -59,12 +57,8 @@ class RegisterController extends Controller
     public function createUser(Request $request){
         return DB::transaction(function() use(&$request){
             $user=JWTAuth::parseToken()->authenticate();
-            $user = User::where("id", $user->id)->get();
-            foreach($user as $u){
-                $roles = $u->roles()->get();
-                $globalRoles = $roles->pluck('role_name');
-            }
-            $haveAdminRole = $globalRoles->contains('Admin');
+            $haveAdminRole= Permission::checkAdmin($user->id);
+
             if($haveAdminRole===true) {
                 $validator = Validator::make($request->all(), [
                     "name" => "required",
@@ -82,27 +76,26 @@ class RegisterController extends Controller
                 $email = $validator->validated()['email'];
                 $token = Str::random(60);
 
-                $user_cresendals = [
+                $user_credentials = [
                     "name" => $name,
                     "email" => $email,
                     "status" => "active"
                 ];
 
-                User::create($user_cresendals);
+                User::create($user_credentials);
 
-                $cresendals = [
+                $credentials = [
                     'email' => $email,
                     'token' => $token,
                 ];
 
-                PasswordResets::create($cresendals);
+                PasswordResets::create($credentials);
 
                 $success = [
                     "url" => env("FRONTEND_URL") . '/reset-password/' . $token,
                     "name" => $name,
                     "email" => $email,
                 ];
-
 
                 $response = [
                     "success" => true,
@@ -121,7 +114,6 @@ class RegisterController extends Controller
         $passwordReset = PasswordResets::where('token', $token)->first();
 
         if (!$passwordReset) {
-
             return response()->json(['error' => 'Invalid token'], 404);
         }
 
@@ -143,8 +135,6 @@ class RegisterController extends Controller
             ];
             return response()->json($success);
         }
-
-
     }
 
     public function resetPassword(Request $request){
@@ -168,12 +158,10 @@ class RegisterController extends Controller
             $find = User::where('email', $email)->first();
 
             if($find){
-
                 $find->password = bcrypt($password);
                 $find->status = "active";
                 $find->save();
                 PasswordResets::where('email', $email)->delete();
-
 
                 $success=[
                     "message" => "Password Reset Successful",
@@ -199,7 +187,6 @@ class RegisterController extends Controller
             $finduser->status="temporary deactivate";
             $finduser->save();
 
-
             if(!$finduser){
                 $success=[
                     "message" => "User does not exist",
@@ -209,12 +196,12 @@ class RegisterController extends Controller
             }
 
             $token = Str::random(60);
-            $cresendals= [
+            $credentials= [
                 "email"=>$finduser->email,
                 "token"=>$token
             ];
 
-            PasswordResets::create($cresendals);
+            PasswordResets::create($credentials);
 
             $success=[
                 "url" =>env("FRONTEND_URL")."/reset-password/".$token,
@@ -222,26 +209,21 @@ class RegisterController extends Controller
                 "email" => $finduser->email,
             ];
 
-
             $response = [
                 "success"=>true,
                 "data"=>$success,
                 "message"=>"User created Successful"
             ];
 
-
             return response()->json($response,200);
         });
-
-
     }
 
-    public function bannTheUser($id){
+    public function banTheUser($id){
         return DB::transaction(function() use(&$id){
             $finduser= User::find($id);
             $finduser->status="Banned";
             $finduser->save();
-
 
             if(!$finduser){
             $success=[
