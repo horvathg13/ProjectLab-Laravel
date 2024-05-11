@@ -2,6 +2,18 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use \App\Http\Controllers\{
+    RegisterController,
+    AuthController,
+    PermissionController,
+    UserController,
+    ProjectController,
+    TaskController,
+    MessageController,
+    NotificationController,
+    StatusController,
+    ButtonController,
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -19,73 +31,94 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 /*RegisterController*/
-Route::post("register",[\App\Http\Controllers\RegisterController::class, "register"]);
-Route::post("createuser",[\App\Http\Controllers\RegisterController::class, "createUser"]);
-Route::get("findUser/{token} ",[\App\Http\Controllers\RegisterController::class, "findUser"]);
-Route::post("resetpassword",[\App\Http\Controllers\RegisterController::class, "resetPassword"]);
-Route::post("password-reset-manual/{id}",[\App\Http\Controllers\RegisterController::class, "passwordResetManual"]);
-Route::post("ban-user/{id}",[\App\Http\Controllers\RegisterController::class, "banTheUser"]);
+Route::controller(RegisterController::class)->group(function (){
+    Route::post("register","register");
+    Route::post("createuser","createUser");
+    Route::get("findUser/{token} ","findUser");
+    Route::post("resetpassword", "resetPassword");
+    Route::post("password-reset-manual/{id}","passwordResetManual");
+    Route::post("ban-user/{id}","banTheUser");
+});
+
 
 /*AuthController*/
-Route::post("login",[\App\Http\Controllers\AuthController::class, "login"]);
-Route::post("logout",[\App\Http\Controllers\AuthController::class, "logout"]);
+Route::controller(AuthController::class)->group(function () {
+    Route::post("login", "login");
+    Route::post("logout", "logout");
+});
 
 /*PermissionController*/
-Route::post("getUserRole",[\App\Http\Controllers\PermissionController::class, "getUserRole"]);
-Route::post("getroles",[\App\Http\Controllers\PermissionController::class, "getRoles"]);
+Route::controller(PermissionController::class)->group(function () {
+    Route::post("getUserRole", "getUserRole");
+    Route::post("getroles", "getRoles");
+});
 
 /*UserController*/
-Route::post("getusers",[\App\Http\Controllers\UserController::class, "getUsers"]);
-Route::post("getUserData",[\App\Http\Controllers\UserController::class, "getUserData"]);
-Route::post("getEmployees",[\App\Http\Controllers\UserController::class, "getEmployees"]);
-Route::post("getManagers",[\App\Http\Controllers\UserController::class, "getManagers"]);
-Route::post("user-to-role",[\App\Http\Controllers\UserController::class, "userToRole"]);
-Route::post("save-profile-data",[\App\Http\Controllers\UserController::class, "saveProfileData"]);
+Route::controller(UserController::class)->group(function () {
+    Route::post("getusers", "getUsers");
+    Route::post("getUserData","getUserData");
+    Route::post("getEmployees", "getEmployees");
+    Route::post("getManagers","getManagers");
+    Route::post("user-to-role", "userToRole");
+    Route::post("save-profile-data", "saveProfileData");
+});
 
 /*ProjectController*/
-Route::post("createproject",[\App\Http\Controllers\ProjectController::class, "createProject"]);
-Route::post("getprojects",[\App\Http\Controllers\ProjectController::class, "getProjects"]);
-Route::post("projects/{id}",[\App\Http\Controllers\ProjectController::class, "getProjectById"]);
-Route::post("getprojectparticipants/{id}",[\App\Http\Controllers\ProjectController::class, "getProjectParticipants"]);
-Route::post("createparticipants",[\App\Http\Controllers\ProjectController::class, "createParticipants"]);
-Route::post("add-favorite-project",[\App\Http\Controllers\ProjectController::class, "addFavoriteProject"]);
-Route::post("remove-favorite-project",[\App\Http\Controllers\ProjectController::class, "removeFromFavorite"]);
-Route::post("get-favorite-projects",[\App\Http\Controllers\ProjectController::class, "getFavoriteProjects"]);
-Route::post("get-manager-projects",[\App\Http\Controllers\ProjectController::class, "getManagerProjects"]);
-Route::post("leave-project",[\App\Http\Controllers\ProjectController::class, "leaveProject"]);
+Route::controller(ProjectController::class)->group(function () {
+    Route::post("createproject", "createProject");
+    Route::post("getprojects","getProjects");
+    Route::post("projects/{id}", "getProjectById");
+    Route::post("getprojectparticipants/{id}", "getProjectParticipants");
+    Route::post("createparticipants", "createParticipants");
+    Route::post("add-favorite-project", "addFavoriteProject");
+    Route::post("remove-favorite-project", "removeFromFavorite");
+    Route::post("get-favorite-projects", "getFavoriteProjects");
+    Route::post("get-manager-projects", "getManagerProjects");
+    Route::post("leave-project", "leaveProject");
+});
 
 /*TaskController*/
-Route::post("createtask",[\App\Http\Controllers\TaskController::class, "createtask"]);
-Route::post("getpriorities",[\App\Http\Controllers\TaskController::class, "getPriorities"]);
-Route::post("projects/{id}/tasks",[\App\Http\Controllers\TaskController::class, "getTasks"]);
-Route::post("assign-employee-to-task",[\App\Http\Controllers\TaskController::class, "AssignEmpoyleeToTask"]);
-Route::post("task-attach-to-myself",[\App\Http\Controllers\TaskController::class, "AttachMyself"]);
-Route::post("getActiveEmployees/{task_id}",[\App\Http\Controllers\TaskController::class, "getActiveEmployees"]);
-Route::post("completed",[\App\Http\Controllers\TaskController::class, "Completed"]);
-Route::post("get-my-tasks",[\App\Http\Controllers\TaskController::class, "MyTasks"]);
-Route::post("get-manager-tasks",[\App\Http\Controllers\TaskController::class, "getManagerTasks"]);
-Route::post("managed-completed-tasks",[\App\Http\Controllers\TaskController::class, "managedCompletedTasks"]);
-Route::post("accept-all-task",[\App\Http\Controllers\TaskController::class, "acceptAllTask"]);
-Route::post("count-of-my-active-tasks",[\App\Http\Controllers\TaskController::class, "countOfMyTasks"]);
-Route::post("accessControlForTasks",[\App\Http\Controllers\TaskController::class, "AccessControlForTasks"]);
+Route::controller(TaskController::class)->group(function () {
+    Route::post("createtask", "createtask");
+    Route::post("getpriorities", "getPriorities");
+    Route::post("projects/{id}/tasks", "getTasks");
+    Route::post("assign-employee-to-task","AssignEmpoyleeToTask");
+    Route::post("task-attach-to-myself", "AttachMyself");
+    Route::post("getActiveEmployees/{task_id}","getActiveEmployees");
+    Route::post("completed", "Completed");
+    Route::post("get-my-tasks",  "MyTasks");
+    Route::post("get-manager-tasks", "getManagerTasks");
+    Route::post("managed-completed-tasks", "managedCompletedTasks");
+    Route::post("accept-all-task", "acceptAllTask");
+    Route::post("count-of-my-active-tasks", "countOfMyTasks");
+    Route::post("accessControlForTasks", "AccessControlForTasks");
+});
 
 /*MessageController*/
-Route::post("send-message",[\App\Http\Controllers\MessageController::class, "sendMessage"]);
-Route::post("get-messages",[\App\Http\Controllers\MessageController::class, "getMessages"]);
-Route::post("get-unread-messages",[\App\Http\Controllers\MessageController::class, "getUnreadMessages"]);
+Route::controller(MessageController::class)->group(function () {
+    Route::post("send-message", "sendMessage");
+    Route::post("get-messages", "getMessages");
+    Route::post("get-unread-messages", "getUnreadMessages");
+});
 
 /*ButtonController*/
-Route::post("get-buttons/{projecId}",[\App\Http\Controllers\ButtonController::class, "getProjectandTaskButtons"]);
-Route::post("get-users-buttons",[\App\Http\Controllers\ButtonController::class, "getUsersButton"]);
+Route::controller(ButtonController::class)->group(function () {
+    Route::post("get-buttons/{projecId}", "getProjectandTaskButtons");
+    Route::post("get-users-buttons", "getUsersButton");
+});
 
 /*StatusController*/
-Route::post("get-status/{ProjectId}/{TaskId}",[\App\Http\Controllers\StatusController::class, "getStatus"]);
-Route::post("set-status",[\App\Http\Controllers\StatusController::class, "setStatus"]);
-Route::post("filter-status/{ProjectId}/{Task}/{StatusId}",[\App\Http\Controllers\StatusController::class, "statusFilterProjectOrTask"]);
+Route::controller(StatusController::class)->group(function () {
+    Route::post("get-status/{ProjectId}/{TaskId}", "getStatus");
+    Route::post("set-status", "setStatus");
+    Route::post("filter-status/{ProjectId}/{Task}/{StatusId}", "statusFilterProjectOrTask");
+});
 
 /*NotificationController*/
-Route::post("notifications",[\App\Http\Controllers\NotificationController::class, "Notifications"]);
-Route::post("get-manager-notification",[\App\Http\Controllers\NotificationController::class, "getManagerNotification"]);
+Route::controller(NotificationController::class)->group(function () {
+    Route::post("notifications", "Notifications");
+    Route::post("get-manager-notification", "getManagerNotification");
+});
 
 
 
