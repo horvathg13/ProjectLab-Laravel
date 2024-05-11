@@ -90,7 +90,7 @@ class PermissionController extends Controller
                 "message"=>"Database error",
                 "code"=>404,
             ];
-            return response()->json($success);
+            return response()->json($success,404);
         }
     }
 }
