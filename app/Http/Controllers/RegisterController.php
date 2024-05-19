@@ -56,10 +56,7 @@ class RegisterController extends Controller
 
     public function createUser(Request $request){
         return DB::transaction(function() use(&$request){
-            $user=JWTAuth::parseToken()->authenticate();
-            $haveAdminRole= Permission::checkAdmin($user->id);
-
-            if($haveAdminRole===true) {
+            if($request->haveAdminRole) {
                 $validator = Validator::make($request->all(), [
                     "name" => "required",
                     "email" => "required|email|unique:users,email",
@@ -179,58 +176,64 @@ class RegisterController extends Controller
         });
     }
 
-    public function passwordResetManual($id){
-        return DB::transaction(function() use(&$id){
-            $finduser= User::find($id);
-            $finduser->password = null;
-            $finduser->remember_token = null;
-            $finduser->status="temporary deactivate";
-            $finduser->save();
+    public function passwordResetManual(Request $request){
+        return DB::transaction(function() use(&$request){
+            if($request->haveAdminRole) {
+                $finduser = User::find($request->userId);
+                $finduser->password = null;
+                $finduser->remember_token = null;
+                $finduser->status = "temporary deactivate";
+                //$finduser->save();
 
-            if(!$finduser){
-                $success=[
-                    "message" => "User does not exist",
-                    "status" => 500
+                if (!$finduser) {
+                    $success = [
+                        "message" => "User does not exist",
+                        "status" => 500
+                    ];
+                    return response()->json($success);
+                }
+
+                $token = Str::random(60);
+                $credentials = [
+                    "email" => $finduser->email,
+                    "token" => $token
                 ];
-                return response()->json($success);
+
+                PasswordResets::create($credentials);
+
+                $success = [
+                    "url" => env("FRONTEND_URL") . "/reset-password/" . $token,
+                    "name" => $finduser->name,
+                    "email" => $finduser->email,
+                ];
+
+                $response = [
+                    "success" => true,
+                    "data" => $success,
+                    "message" => "User created Successful"
+                ];
+
+                return response()->json($response, 200);
+            }else{
+                throw new \Exception('Denied');
             }
-
-            $token = Str::random(60);
-            $credentials= [
-                "email"=>$finduser->email,
-                "token"=>$token
-            ];
-
-            PasswordResets::create($credentials);
-
-            $success=[
-                "url" =>env("FRONTEND_URL")."/reset-password/".$token,
-                "name" => $finduser->name,
-                "email" => $finduser->email,
-            ];
-
-            $response = [
-                "success"=>true,
-                "data"=>$success,
-                "message"=>"User created Successful"
-            ];
-
-            return response()->json($response,200);
         });
     }
 
-    public function banTheUser($id){
-        return DB::transaction(function() use(&$id){
-            $finduser= User::find($id);
-            $finduser->status="Banned";
-            $finduser->save();
+    public function banUser(Request $request){
+        return DB::transaction(function() use(&$request){
+            if($request->haveAdminRole) {
+                $finduser = User::find($request->userId);
+                $finduser->status = "Banned";
+                $finduser->save();
 
-            if(!$finduser){
-            $success=[
-                "message" => "User does not exist",
-                "status" => 500
-            ];
-            return response()->json($success);
+                if (!$finduser) {
+                    $success = [
+                        "message" => "User does not exist",
+                        "status" => 500
+                    ];
+                    return response()->json($success);
+                }
             }
         });
     }

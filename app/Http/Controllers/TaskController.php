@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\PermissionController as Permission;
 use App\Http\Controllers\TaskController\Exception;
 use App\Models\AssignedTask;
 use App\Models\ProjectParticipants;
@@ -12,6 +11,7 @@ use App\Models\TaskPriorities;
 use App\Models\Tasks;
 use App\Models\TaskStatus;
 use App\Models\User;
+use App\Traits\PermissionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -20,6 +20,7 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class TaskController extends Controller
 {
+    use PermissionTrait;
     public function getPriorities(){
         $priorities = TaskPriorities::all();
         $success=[];
@@ -109,14 +110,6 @@ class TaskController extends Controller
         $sortData = $request->input('sortData');
         $filterData = $request->input('filterData');
 
-        $accessControll=ProjectParticipants::where(["user_id"=>$user->id, "p_id"=>$id])->exists();
-
-        $haveAdminRole=Permission::checkAdmin($user->id);
-
-        if($accessControll === false && $haveAdminRole === false){
-            throw new \Exception("Access Denied");
-        }
-
         $data = [
             'projectId' => $id,
             'sortData' => $sortData,
@@ -135,10 +128,6 @@ class TaskController extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-
-        $haveManagerRole=Permission::checkProjectManagerRole($id, $user->id);
-        $haveParticipantRole = Permission::checkProjectParticipant($id, $user->id);
-
 
         $taskQuery= Tasks::where("p_id", $id);
         if(!empty($filterData)){
@@ -165,7 +154,7 @@ class TaskController extends Controller
             }
         }
         $tasks = $taskQuery->get();
-        $findUserasParticipant = Permission::findUserAsParticipant($id, $user->id);
+        $findUserasParticipant = $this->findUserAsParticipant($id, $user->id);
         $success=[];
 
         foreach($tasks as $task){
@@ -192,18 +181,18 @@ class TaskController extends Controller
         if(!empty($success)){
             $success[]=[
                 "roles"=>[
-                    "haveManagerRole"=>$haveManagerRole,
-                    "haveAdminRole"=>$haveAdminRole,
-                    "haveParticipantRole"=>$haveParticipantRole,
+                    "haveManagerRole"=>$request->isProjectManager,
+                    "haveAdminRole"=>$request->haveAdminRole,
+                    "haveParticipantRole"=>$request->isProjectParticipant,
                 ]
             ];
             return response()->json($success,200);
         }else{
             $success=[
                 "message"=>"You have no tasks in this project!",
-                "haveManagerRole"=>$haveManagerRole,
-                "haveAdminRole"=>$haveAdminRole ?? false,
-                "haveParticipantRole"=>$haveParticipantRole,
+                "haveManagerRole"=>$request->isProjectManager,
+                "haveAdminRole"=>$request->haveAdminRole ?? false,
+                "haveParticipantRole"=>$request->isProjectParticipant,
                 "code"=>404,
             ];
             return response()->json($success,404);
@@ -211,12 +200,7 @@ class TaskController extends Controller
     }
     public function AssignEmpoyleeToTask(Request $request){
         return DB::transaction(function() use(&$request){
-            $user=JWTAuth::parseToken()->authenticate();
-
-            $haveAdminRole= Permission::checkAdmin($user->id);
-            $haveManagerRole= Permission::checkManager($user->id);
-
-            if($haveManagerRole===true || $haveAdminRole===true){
+            if($request->haveManagerRole || $request->haveAdminRole){
                 $data=$request->input('requestData');
                 $remove = $request->input('removeData');
                 $task_id = $request->input('task_id');
@@ -224,7 +208,7 @@ class TaskController extends Controller
 
                 if(!empty($data)){
                     foreach($data as $d){
-                        $findAssignedUser = Permission::checkTaskAssigned($d['id'],$d['task_id']);
+                        $findAssignedUser = $this->checkTaskAssigned($d['id'],$d['task_id']);
                         if($findAssignedUser==true){
                             throw new \Exception("User already assigned to this task");
                         }else{
@@ -271,9 +255,9 @@ class TaskController extends Controller
             $project_id=$request->projectId;
             $task_id=$request->taskId;
 
-            $checkUserInProject = Permission::findUserAsParticipant($project_id, $user->id);
+            $checkUserInProject = $this->findUserAsParticipant($project_id, $user->id);
             if(!empty($checkUserInProject)){
-                $alreadyAssigned= Permission::checkTaskAssigned($checkUserInProject->id,$task_id);
+                $alreadyAssigned= $this->checkTaskAssigned($checkUserInProject->id,$task_id);
                 if($alreadyAssigned===true){
                     throw new \Exception("Already attached yourself!");
                 }else{
@@ -346,7 +330,7 @@ class TaskController extends Controller
 
             $success=[];
 
-            $findUserasParticipant = Permission::findUserAsParticipant($ProjectId, $user->id);
+            $findUserasParticipant = $this->findUserAsParticipant($ProjectId, $user->id);
             if(empty($findUserasParticipant)){
                 throw new \Exception("Denied!");
             }else{
@@ -451,8 +435,7 @@ class TaskController extends Controller
             throw new ValidationException($validator);
         }
 
-        $haveManagerRole = Permission::checkManager($user->id);
-        if($haveManagerRole===true){
+        if($request->haveManagerRole){
             $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
             $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
             $taskQuery = Tasks::whereIn("p_id",$projectsQuery);
@@ -487,7 +470,7 @@ class TaskController extends Controller
                 $findPriority = TaskPriorities::where("id", $task->t_priority)->first();
                 $findStatus = TaskStatus::where("id",$task->t_status)->first();
                 $findTaskParticiantsCount = AssignedTask::where("task_id", $task->id)->count();
-                $findUserasParticipant = Permission::findUserAsParticipant($task->p_id,$user->id);
+                $findUserasParticipant = $this->findUserAsParticipant($task->p_id,$user->id);
                 $findMyTask = $findUserasParticipant ? AssignedTask::where(["task_id"=>$task->id,"p_participant_id"=>$findUserasParticipant->id])->exists() : false;
 
                 $success[]=[
@@ -499,7 +482,7 @@ class TaskController extends Controller
                     "priority_id"=>$findPriority->id,
                     "priority"=>$findPriority->task_priority,
                     "employees"=>$findTaskParticiantsCount,
-                    "haveManagerRole"=>$haveManagerRole,
+                    "haveManagerRole"=>$request->haveManagerRole,
                     "p_id"=>$task->p_id,
                     "myTask"=>$findMyTask
                 ];
@@ -516,11 +499,10 @@ class TaskController extends Controller
             throw new \Exception("Access Denied");
         }
     }
-    public function managedCompletedTasks(){
+    public function managedCompletedTasks(Request $request){
         $user=JWTAuth::parseToken()->authenticate();
-        $haveManagerRole=Permission::checkManager($user->id);
 
-        if($haveManagerRole===true){
+        if($request->haveManagerRole){
             $findCompleted = TaskStatus::where("task_status", "Completed")->pluck('id');
             $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
             $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
@@ -548,7 +530,7 @@ class TaskController extends Controller
                     "priority_id"=>$findPriority->id,
                     "priority"=>$findPriority->task_priority,
                     "employees"=>$findTaskParticiantsCount,
-                    "haveManagerRole"=>$haveManagerRole,
+                    "haveManagerRole"=>$request->haveManagerRole,
                 ];
             }
 
@@ -559,7 +541,7 @@ class TaskController extends Controller
 
                 $success=[
                     "message"=>"You have no tasks to be approved",
-                    "haveManagerRole"=>$haveManagerRole,
+                    "haveManagerRole"=>$request->haveManagerRole,
                     "code"=>404,
                 ];
                 return response()->json($success,404);
@@ -568,12 +550,11 @@ class TaskController extends Controller
             throw new Exception("Access Denied");
         }
     }
-    public function acceptAllTask(){
-        return DB::transaction(function(){
+    public function acceptAllTask(Request $request){
+        return DB::transaction(function() use(&$request){
             $user=JWTAuth::parseToken()->authenticate();
-            $haveManagerRole=Permission::checkManager($user->id);
 
-            if($haveManagerRole===true){
+            if($request->haveManagerRole){
                 $findCompleted = TaskStatus::where("task_status", "Completed")->pluck('id');
                 $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
                 $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
@@ -589,7 +570,7 @@ class TaskController extends Controller
                 }
                 $success=[
                     "message"=>"All task accepted!",
-                    "haveManagerRole"=>$haveManagerRole,
+                    "haveManagerRole"=>$request->haveManagerRole,
                     "code"=>200,
                 ];
                 return response()->json($success,200);
@@ -618,17 +599,4 @@ class TaskController extends Controller
             return response()->json($findTasks, 200);
         }
     }
-    public function AccessControlForTasks(Request $request){
-        $user= JWTAuth::parseToken()->authenticate();
-        $ProjectId = $request->input("p_id");
-        $findUserasParticipant=Permission::checkProjectParticipant($ProjectId, $user->id);
-        $haveAdminRole = Permission::checkAdmin($user->id);
-
-        if($findUserasParticipant === false && $haveAdminRole === false){
-            throw new \Exception("Access Denied");
-        }else{
-            return response(200);
-        }
-    }
-
 }

@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\PermissionController as Permission;
 use App\Models\Roles;
 use App\Models\RoleToUser;
 use App\Models\User;
+use App\Traits\PermissionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -15,6 +15,8 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
 {
+    use PermissionTrait;
+
     public function getUserData(){
         try{
             $user = JWTAuth::parseToken()->authenticate();
@@ -31,18 +33,22 @@ class UserController extends Controller
         }
     }
 
-    public function getUsers(){
-        $success = Permission::usersAndRoles();
-        if($success){
-            foreach ($success as &$u){
-                $convert= $u["roles"]->implode(", ", $u['roles']);
-                $u['roles']= $convert;
+    public function getUsers(Request $request){
+        if($request->haveAdminRole){
+            $success = $this->usersAndRoles();
+            if($success){
+                foreach ($success as &$u){
+                    $convert= $u["roles"]->implode(", ", $u['roles']);
+                    $u['roles']= $convert;
+                }
+                return response()->json($success);
             }
-            return response()->json($success);
+        }else{
+            throw new \Exception('Denied');
         }
     }
     public function getManagers(){
-        $users = Permission::usersAndRoles();;
+        $users = $this->usersAndRoles();
         if($users){
             $success=[];
             foreach($users as $user){
@@ -71,7 +77,7 @@ class UserController extends Controller
     }
     public function getEmployees(Request $request){
 
-        $users = Permission::usersAndRoles();;
+        $users = $this->usersAndRoles();;
         if($users) {
             $allEmployee=[];
             foreach ($users as $user) {
@@ -98,10 +104,7 @@ class UserController extends Controller
 
     public function userToRole(Request $request){
         return DB::transaction(function() use(&$request){
-
-            $checkUser=JWTAuth::parseToken()->authenticate();
-            $haveAdminRole = Permission::checkAdmin($checkUser->id);
-            if($haveAdminRole){
+            if($request->haveAdminRole){
                 $selectedRoles = $request->input('selectedRole');
                 $id = $request->input('user_id');
                 $remove= $request->input('remove');
@@ -208,5 +211,39 @@ class UserController extends Controller
             }
         });
     }
+    public function getRoles(){
+        $roles = Roles::all();
+        if($roles){
+            $success=[
+                "roles" => $roles,
+                "message"=>"That's it!",
+                "code"=>200,
+            ];
+            return response()->json($success);
+        }else{
+            $success=[
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($success);
+        }
+    }
+    public function getUserRole(){
+        $user= JWTAuth::parseToken()->authenticate();
 
+        $success=[];
+        $roles = $user->roles()->get();
+        foreach($roles as $r){
+            $success[]=["role"=>$r->role_name];
+        }
+        if(!empty($success)){
+            return response()->json($success,200);
+        }else{
+            $success=[
+                "message"=>"Database error",
+                "code"=>404,
+            ];
+            return response()->json($success,404);
+        }
+    }
 }

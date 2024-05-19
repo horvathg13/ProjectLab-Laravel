@@ -13,6 +13,7 @@ use App\Models\Roles;
 use App\Models\RoleToUser;
 use App\Models\Tasks;
 use App\Models\User;
+use App\Traits\PermissionTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -22,9 +23,9 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ProjectController extends Controller
 {
+    use PermissionTrait;
     public function createProject(Request $request){
         return DB::transaction(function() use(&$request){
-            $user=JWTAuth::parseToken()->authenticate();
             $project_name = $request->input('project_name');
             $managerId= $request->input('manager_id');
             $date=$request->input('date');
@@ -52,10 +53,7 @@ class ProjectController extends Controller
                 return response()->json($response, 400);
             }
 
-            $haveAdminRole=Permission::checkAdmin($user->id);
-            $haveManagerRole=Permission::checkManager($user->id);
-
-            if($haveAdminRole===true || $haveManagerRole === true){
+            if($request->haveAdminRole || $request->haveManagerRole){
                 if(!empty($project_id)){
                     $findProject = Projects::where(["id"=>$project_id])->first();
                     if($findProject != null){
@@ -192,7 +190,7 @@ class ProjectController extends Controller
 
         /*$findAdminRole = Roles::where("role_name","Admin")->pluck("id");
         $checkAdmin = RoleToUser::where(["user_id"=>$user->id, "role_id"=>$findAdminRole])->exists();*/
-        $checkAdmin=Permission::checkAdmin($user->id);
+        $checkAdmin= $this->checkAdmin($user->id);
         $success =[];
         if($checkAdmin===true){
             foreach($projects as $project){
@@ -296,11 +294,7 @@ class ProjectController extends Controller
     }
     public function createParticipants(Request $request){
         return DB::transaction(function() use(&$request){
-            $user=JWTAuth::parseToken()->authenticate();
-            $haveManagerRole = Permission::checkManager($user->id);
-            $haveAdminRole = Permission::checkAdmin($user->id);
-
-            if($haveManagerRole===true || $haveAdminRole===true){
+            if($request->haveManagerRole || $reqeust->haveAdminRole){
                 $validator = Validator::make($request->all(),[
                     "participants" => "nullable",
                     "project" => "required",
@@ -322,7 +316,7 @@ class ProjectController extends Controller
                 }
                 if(!empty($participants)){
                     foreach($participants as $parti){
-                        $findParticipants = Permission::checkProjectParticipant($project['project_id'], $parti['id']);
+                        $findParticipants = $this->checkProjectParticipant($project['project_id'], $parti['id']);
                         if($findParticipants === true){
                             throw new \Exception("Participants already attached!");
                         }else{
@@ -348,7 +342,7 @@ class ProjectController extends Controller
                         if(empty($findManagerInParticipants)){
                             throw new \Exception("Database error: User does not found!");
                         }else{
-                            $findAsManager= Permission::checkProjectManagerRole($project['project_id'], $findManagerInParticipants->user_id);
+                            $findAsManager= $this->checkProjectManagerRole($project['project_id'], $findManagerInParticipants->user_id);
                             if($findAsManager === true){
                                 throw new \Exception("You can not remove the project manager");
                             }else{
@@ -374,7 +368,7 @@ class ProjectController extends Controller
         $user= JWTAuth::parseToken()->authenticate();
         $projectData = $request->input('project');
 
-        $findProjectInFavorite = Permission::checkFavoriteProject($user->id, $projectData['project_id']);
+        $findProjectInFavorite = $this->checkFavoriteProject($user->id, $projectData['project_id']);
         if($findProjectInFavorite === false){
             FavoriteProjects::create([
                 "added_by"=>$user->id,
@@ -394,7 +388,7 @@ class ProjectController extends Controller
         $user= JWTAuth::parseToken()->authenticate();
         $projectData = $request->input('project');
 
-        $findProjectInFavorite = Permission::checkFavoriteProject($user->id, $projectData['project_id']);
+        $findProjectInFavorite = $this->checkFavoriteProject($user->id, $projectData['project_id']);
         if($findProjectInFavorite === true){
             FavoriteProjects::where(["added_by"=>$user->id, "project_id"=>$projectData['project_id']])->delete();
         }else{
@@ -446,7 +440,7 @@ class ProjectController extends Controller
             foreach($projects as $project){
                 $findManager = User::where("id", $project->p_manager_id)->first();
                 $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
-                $findFavorite = Permission::checkFavoriteProject($user->id, $project->id);
+                $findFavorite = $this->checkFavoriteProject($user->id, $project->id);
                 $success[] =[
                     "project_id" => $project->id,
                     "manager_id"=>$project->p_manager_id,
@@ -482,9 +476,8 @@ class ProjectController extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-        $haveManagerRole = Permission::checkManager($user->id);
-        if($haveManagerRole) {
 
+        if($request->haveManagerRole) {
             $findActiveProjects = ProjectsStatus::where("p_status", "Active")->first();
             $projectsQuery = Projects::where(["p_manager_id" => $user->id, "p_status" => $findActiveProjects->id]);
 
@@ -519,7 +512,7 @@ class ProjectController extends Controller
                 $findManager = User::where("id", $project->p_manager_id)->first();
                 $findStatus = ProjectsStatus::where("id", $project->p_status)->first();
                 //$findFavorite = FavoriteProjects::where(["added_by"=> $user->id, "project_id"=>$project->id])->exists();
-                $findFavorite = Permission::checkFavoriteProject($user->id, $project->id);
+                $findFavorite = $this->checkFavoriteProject($user->id, $project->id);
                 $success[] = [
                     "project_id" => $project->id,
                     "manager_id" => $project->p_manager_id,
@@ -546,8 +539,8 @@ class ProjectController extends Controller
             $user=JWTAuth::parseToken()->authenticate();
             $projectId = $request->input('projectId');
 
-            $findUser = Permission::findUserAsParticipant($projectId, $user->id);
-            $findUserAsManager = Permission::checkProjectManagerRole($projectId, $user->id);
+            $findUser = $this->findUserAsParticipant($projectId, $user->id);
+            $findUserAsManager = $this->checkProjectManagerRole($projectId, $user->id);
 
             if($findUserAsManager === true){
                 throw new \Exception("The manager can not leave the project");

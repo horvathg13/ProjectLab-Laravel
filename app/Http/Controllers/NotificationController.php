@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\PermissionController as Permission;
 use App\Models\AssignedTask;
 use App\Models\ChatMessages;
 use App\Models\ChatView;
@@ -11,6 +10,7 @@ use App\Models\Projects;
 use App\Models\ProjectsStatus;
 use App\Models\Tasks;
 use App\Models\TaskStatus;
+use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class NotificationController extends Controller
@@ -103,21 +103,16 @@ class NotificationController extends Controller
 
         return response()->json($success_unique, 200);
     }
-    public function getManagerNotification(){
-        $user=JWTAuth::parseToken()->authenticate();
-        $haveManagerRole = Permission::checkManager($user->id);
-
-        if($haveManagerRole===true){
+    public function getManagerNotification(Request $request){
+        if($request->haveManagerRole){
+            $user= JWTAuth::parseToken()->authenticate();
             $findActiveProjects=ProjectsStatus::where("p_status","Active")->first();
             $findTasksStatus = TaskStatus::where("task_status", "Completed")->first();
             $projectsQuery= Projects::where(["p_manager_id"=> $user->id, "p_status"=>$findActiveProjects->id])->pluck('id');
             $taskQuery = Tasks::whereIn("p_id",$projectsQuery)->where("t_status",$findTasksStatus->id);
 
             $tasks = $taskQuery->count();
-
-
             return response()->json($tasks,200);
-
         }
 
     }
