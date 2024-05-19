@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Traits;
 
 use App\Models\AssignedTask;
 use App\Models\FavoriteProjects;
@@ -10,8 +10,9 @@ use App\Models\Roles;
 use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
-class PermissionController extends Controller
+trait PermissionTrait
 {
+
     public function checkAdmin($userId){
         $users = User::where("id", $userId)->first();
         $roles = $users->roles()->pluck('role_name')->toArray();
@@ -38,7 +39,7 @@ class PermissionController extends Controller
         return AssignedTask::where(["p_participant_id"=> $projectParticipantId,"task_id"=> $taskId])->exists();
     }
     public function usersAndRoles(){
-        $users = UserController::activeUsers();
+        $users =  User::where("status", "active")->get();
         $success=[];
         foreach($users as $user){
             $roles = $user->roles()->get();
@@ -58,39 +59,5 @@ class PermissionController extends Controller
             return false;
         }
     }
-    public function getRoles(){
-        $roles = Roles::all();
-        if($roles){
-            $success=[
-                "roles" => $roles,
-                "message"=>"That's it!",
-                "code"=>200,
-            ];
-            return response()->json($success);
-        }else{
-            $success=[
-                "message"=>"Database error",
-                "code"=>404,
-            ];
-            return response()->json($success);
-        }
-    }
-    public function getUserRole(){
-        $user= JWTAuth::parseToken()->authenticate();
 
-        $success=[];
-        $roles = $user->roles()->get();
-        foreach($roles as $r){
-            $success[]=["role"=>$r->role_name];
-        }
-        if(!empty($success)){
-            return response()->json($success,200);
-        }else{
-            $success=[
-                "message"=>"Database error",
-                "code"=>404,
-            ];
-            return response()->json($success,404);
-        }
-    }
 }
