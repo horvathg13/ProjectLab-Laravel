@@ -106,8 +106,6 @@ Route::controller(MessageController::class)->group(function () {
 
 /*ButtonController*/
 Route::controller(ButtonController::class)->group(function () {
-    Route::post("get-buttons/{projecId}", "getProjectandTaskButtons");
-    Route::post("get-users-buttons", "getUsersButton");
     Route::post("buttonAuth", "buttonAuth");
 });
 
