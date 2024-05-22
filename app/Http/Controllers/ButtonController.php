@@ -30,10 +30,12 @@ class ButtonController extends Controller
         $user=JWTAuth::parseToken()->authenticate();
         $isProjectManager = $this->checkProjectManagerRole($request->projectId, $user->id);
         $isProjectParticipant = $this->checkProjectParticipant($request->projectId, $user->id);
+        $isAdmin=$this->checkAdmin($user->id);
 
         $success=[
             "manager"=>$isProjectManager,
-            "employee"=>$isProjectParticipant
+            "employee"=>$isProjectParticipant,
+            "admin"=>$isAdmin,
         ];
         return response()->json($success,200);
     }
