@@ -188,8 +188,6 @@ class ProjectController extends Controller
         }
         $projects = $projectsQuery->get();
 
-        /*$findAdminRole = Roles::where("role_name","Admin")->pluck("id");
-        $checkAdmin = RoleToUser::where(["user_id"=>$user->id, "role_id"=>$findAdminRole])->exists();*/
         $checkAdmin= $this->checkAdmin($user->id);
         $success =[];
         if($checkAdmin===true){
@@ -212,8 +210,6 @@ class ProjectController extends Controller
 
             if(!empty($success)){
                 return response()->json($success,200);
-            }else{
-                throw new \Exception('Database error occured.');
             }
         }else{
             foreach($projects as $project){
@@ -239,7 +235,6 @@ class ProjectController extends Controller
             }else{
                 throw new \Exception("You have no attached project!");
             }
-
         }
     }
     public function getProjectById($id){
