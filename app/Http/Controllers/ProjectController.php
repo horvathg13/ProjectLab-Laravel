@@ -289,7 +289,7 @@ class ProjectController extends Controller
     }
     public function createParticipants(Request $request){
         return DB::transaction(function() use(&$request){
-            if($request->haveManagerRole || $reqeust->haveAdminRole){
+            if($request->haveManagerRole || $request->haveAdminRole){
                 $validator = Validator::make($request->all(),[
                     "participants" => "nullable",
                     "project" => "required",
